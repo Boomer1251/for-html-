@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Changelog Studio</title>
+    <style>
+        :root {
+            --bg-dark: #0f1115;
+            --panel-bg: #181b22;
+            --panel-border: #2a2e39;
+            --accent: #00ffcc;
+            --accent-hover: #00ccaa;
+            --text-main: #f0f0f5;
+            --text-muted: #9ba1b0;
+            --danger: #ff4d4d;
+            --danger-hover: #cc3333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Editor */
+        .sidebar {
+            width: 480px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-header h1 {
+            font-size: 20px;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 8px 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-size: 13px;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button.secondary {
+            background-color: #2a2e39;
+            color: var(--text-main);
+        }
+
+        button.secondary:hover {
+            background-color: #383d4c;
+        }
+
+        button.danger {
+            background-color: var(--danger);
+            color: #fff;
+        }
+
+        button.danger:hover {
+            background-color: var(--danger-hover);
+        }
+
+        .editor-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .version-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .version-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="text"], textarea {
+            background: #111318;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .patch-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-left: 10px;
+            border-left: 2px solid var(--panel-border);
+            margin-top: 5px;
+        }
+
+        .patch-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .patch-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* Preview Area */
+        .preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #1b202b 0%, #0b0d12 100%);
+            padding: 40px;
+            position: relative;
+        }
+
+        .preview-title {
+            position: absolute;
+            top: 20px;
+            left: 25px;
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Simulated Roblox SurfaceGui */
+        .roblox-surface {
+            width: 800px;
+            height: 600px;
+            background-color: rgba(0, 0, 0, 0.85);
+            border: 5px solid #000;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .roblox-header {
+            height: 50px;
+            width: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .roblox-title {
+            position: absolute;
+            left: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #fff;
+            font-family: sans-serif;
+        }
+
+        .roblox-tab-nav {
+            position: absolute;
+            left: 210px;
+            right: 10px;
+            top: 8px;
+            bottom: 8px;
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            align-items: center;
+            scrollbar-width: thin;
+        }
+
+        .roblox-tab-btn {
+            background-color: #868686;
+            color: #fff;
+            border: none;
+            padding: 0 16px;
+            height: 100%;
+            font-size: 22px;
+            font-family: sans-serif;
+            cursor: pointer;
+            white-space: nowrap;
+            border-radius: 0;
+            flex-shrink: 0;
+        }
+
+        .roblox-tab-btn.active {
+            background-color: #c8c8c8;
+            color: #000;
+        }
+
+        .roblox-content-scroll {
+            position: absolute;
+            top: 55px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-right: 5px;
+        }
+
+        .roblox-patch-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .roblox-patch-header {
+            font-size: 22px;
+            font-weight: bold;
+            color: #fff;
+            font-family: sans-serif;
+        }
+
+        .roblox-patch-body {
+            font-size: 18px;
+            color: #d2d2d2;
+            font-family: sans-serif;
+            white-space: pre-wrap;
+            line-height: 1.35;
+        }
+
+        /* Modal / Export Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            width: 700px;
+            max-height: 80vh;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>Changelog Studio</h1>
+            <div class="action-buttons">
+                <button onclick="addVersion()">+ Add Version</button>
+                <button class="secondary" onclick="openExportModal()">Export Lua</button>
+                <button class="secondary" onclick="openImportModal()">Import Lua</button>
+            </div>
+        </div>
+        <div class="editor-content" id="editorContent">
+            <!-- Dynamically populated version cards -->
+        </div>
+    </div>
+
+    <div class="preview-container">
+        <div class="preview-title">Live Roblox SurfaceGui Preview</div>
+        <div class="roblox-surface">
+            <div class="roblox-header">
+                <div class="roblox-title">CHANGELOGS</div>
+                <div class="roblox-tab-nav" id="previewTabNav"></div>
+            </div>
+            <div class="roblox-content-scroll" id="previewContentScroll"></div>
+        </div>
+    </div>
+
+    <!-- Export / Import Modal -->
+    <div class="modal-overlay" id="luaModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Export Lua Script</h3>
+                <button class="secondary" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalDesc" style="color: var(--text-muted); font-size: 13px;">Copy the generated script below and paste it directly into Roblox Studio:</p>
+                <textarea id="luaCodeBox" style="height: 350px; font-family: monospace;" readonly></textarea>
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <button onclick="copyLuaCode()">Copy to Clipboard</button>
+                <button class="secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+let versionData = [
+	{
+		Tab: "v0.1",
+		Patches: [
+			{ Header: "v0.1", Body: "- Hacklord Ability Release\n- Gave Hacklord a new ability\n- Updated shootlord\n- Fixed enemies not spawning" },
+			{ Header: "v0.1.1", Body: "- Remade Voidbird" },
+			{ Header: "v0.1.2", Body: "- Revamped Hacklord's pathing system\n- he now gains a 40% speed boost when he hits his ability." },
+			{ Header: "v0.1.3", Body: "- Added 5 new tiles\n- buffed shootlord" }
+		]
+	},
+	{
+		Tab: "v0.2",
+		Patches: [
+			{ Header: "v0.2 BIG update 26.08.26", Body: "- Added level system\n- Hacklord now respawns and gets a slight buff to all of his stats when he respawns:\n  WalkSpeed: +10%\n  Entanglement Damage: +10%\nBalance changes:\n  Entanglement damage 25>10\n  Hacklord walkspeed 19>18\n- Added more qol stuff" }
+		]
+	},
+	{
+		Tab: "v0.3",
+		Patches: [
+			{ Header: "v0.3", Body: "- added Upgrades (VERY WIP)\n- updated block sfx\n- nerfed shootlord's second phase" },
+			{ Header: "v0.3.1", Body: "- Nerfed some of the enemies\n- Fixed the upgrade bugs\n- Made the gift generation better in general\n- fixed more bugs" }
+		]
+	},
+	{
+		Tab: "v0.4",
+		Patches: [
+			{ Header: "v0.4", Body: "- replaced dive with dash\n- made some changes to voidbird" },
+			{ Header: "v0.4.1", Body: "- Added more music" }
+		]
+	},
+	{
+		Tab: "v0.5",
+		Patches: [
+			{ Header: "v0.5 15.09.26", Body: "- Nerfed most of the enemies to make the gameplay better\n- Added a new upgrade (broken rn)\n(its been a long time huh)" }
+		]
+	},
+	{
+		Tab: "v0.6",
+		Patches: [
+			{ Header: "v0.6 21.09.26", Body: "- QOL changes\n- New speed meter" }
+		]
+	}
+];
+
+let activeTab = versionData.length > 0 ? versionData[versionData.length - 1].Tab : "";
+
+function loadFromStorage() {
+    const saved = localStorage.getItem('roblox_changelog_data');
+    if (saved) {
+        try {
+            versionData = JSON.parse(saved);
+            if (versionData.length > 0 && !versionData.some(v => v.Tab === activeTab)) {
+                activeTab = versionData[versionData.length - 1].Tab;
+            }
+        } catch(e) { console.error(e); }
+    }
+}
+
+function saveToStorage() {
+    localStorage.setItem('roblox_changelog_data', JSON.stringify(versionData));
+}
+
+function render() {
+    saveToStorage();
+    renderEditor();
+    renderPreview();
+}
+
+function renderEditor() {
+    const container = document.getElementById('editorContent');
+    container.innerHTML = '';
+
+    versionData.forEach((verGroup, vIdx) => {
+        const card = document.createElement('div');
+        card.className = 'version-card';
+
+        let patchesHtml = '';
+        verGroup.Patches.forEach((patch, pIdx) => {
+            patchesHtml += `
+                <div class="patch-item">
+                    <input type="text" value="${escapeHtml(patch.Header)}" placeholder="Patch Header (e.g. v0.1.1)" oninput="updatePatch(${vIdx}, ${pIdx}, 'Header', this.value)">
+                    <textarea placeholder="Patch body bullets..." oninput="updatePatch(${vIdx}, ${pIdx}, 'Body', this.value)">${escapeHtml(patch.Body)}</textarea>
+                    <div class="patch-actions">
+                        <button class="danger" style="padding: 4px 10px; font-size: 11px;" onclick="deletePatch(${vIdx}, ${pIdx})">Delete Patch</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        card.innerHTML = `
+            <div class="version-header-row">
+                <input type="text" value="${escapeHtml(verGroup.Tab)}" placeholder="Version Tab Name (e.g. v0.7)" oninput="updateVersionTab(${vIdx}, this.value)" style="font-weight: bold; font-size: 15px;">
+                <button class="danger" onclick="deleteVersion(${vIdx})">Delete Version</button>
+            </div>
+            <div class="patch-list">
+                ${patchesHtml}
+                <button class="secondary" style="margin-top: 5px;" onclick="addPatch(${vIdx})">+ Add Patch</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function renderPreview() {
+    const tabNav = document.getElementById('previewTabNav');
+    const contentScroll = document.getElementById('previewContentScroll');
+    tabNav.innerHTML = '';
+    contentScroll.innerHTML = '';
+
+    if (!versionData.some(v => v.Tab === activeTab) && versionData.length > 0) {
+        activeTab = versionData[versionData.length - 1].Tab;
+    }
+
+    versionData.forEach(verGroup => {
+        const btn = document.createElement('button');
+        btn.className = `roblox-tab-btn ${verGroup.Tab === activeTab ? 'active' : ''}`;
+        btn.innerText = verGroup.Tab;
+        btn.onclick = () => {
+            activeTab = verGroup.Tab;
+            renderPreview();
+        };
+        tabNav.appendChild(btn);
+
+        if (verGroup.Tab === activeTab) {
+            verGroup.Patches.forEach(patch => {
+                const group = document.createElement('div');
+                group.className = 'roblox-patch-group';
+                group.innerHTML = `
+                    <div class="roblox-patch-header">${escapeHtml(patch.Header)}</div>
+                    <div class="roblox-patch-body">${escapeHtml(patch.Body)}</div>
+                `;
+                contentScroll.appendChild(group);
+            });
+        }
+    });
+}
+
+function addVersion() {
+    let newName = "v0." + (versionData.length + 1);
+    versionData.push({
+        Tab: newName,
+        Patches: [
+            { Header: newName, Body: "- New update changes here" }
+        ]
+    });
+    activeTab = newName;
+    render();
+}
+
+function deleteVersion(vIdx) {
+    if (versionData.length <= 1) {
+        alert("You must keep at least one version!");
+        return;
+    }
+    versionData.splice(vIdx, 1);
+    activeTab = versionData[versionData.length - 1].Tab;
+    render();
+}
+
+function updateVersionTab(vIdx, val) {
+    versionData[vIdx].Tab = val;
+    if (versionData[vIdx].Tab === activeTab || !versionData.some(v => v.Tab === activeTab)) {
+        activeTab = val;
+    }
+    saveToStorage();
+    renderPreview();
+}
+
+function addPatch(vIdx) {
+    versionData[vIdx].Patches.push({ Header: versionData[vIdx].Tab + ".1", Body: "- New patch notes" });
+    render();
+}
+
+function deletePatch(vIdx, pIdx) {
+    if (versionData[vIdx].Patches.length <= 1) {
+        alert("A version must have at least one patch!");
+        return;
+    }
+    versionData[vIdx].Patches.splice(pIdx, 1);
+    render();
+}
+
+function updatePatch(vIdx, pIdx, field, val) {
+    versionData[vIdx].Patches[pIdx][field] = val;
+    saveToStorage();
+    renderPreview();
+}
+
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function generateLuaTable() {
+    let lua = "local versionData = {\n";
+    versionData.forEach((vGroup, i) => {
+        lua += `\t{\n`;
+        lua += `\t\tTab = "${vGroup.Tab}",\n`;
+        lua += `\t\tPatches = {\n`;
+        vGroup.Patches.forEach((patch, j) => {
+            const escapedHeader = patch.Header.replace(/"/g, '\\"');
+            const escapedBody = patch.Body.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+            lua += `\t\t\t{ Header = "${escapedHeader}", Body = "${escapedBody}" }`;
+            if (j < vGroup.Patches.length - 1) lua += ",";
+            lua += "\n";
+        });
+        lua += `\t\t}\n`;
+        lua += `\t}`;
+        if (i < versionData.length - 1) lua += ",";
+        lua += "\n";
+    });
+    lua += "}";
+    return lua;
+}
+
+function getFullLuaScript() {
+    const tableStr = generateLuaTable();
+    return `-- Auto-generated SurfaceGui Recreator with re-indexed version numbers
+local SoundService = game:GetService("SoundService")
+
+local inst_1 = Instance.new("SurfaceGui")
+inst_1.Name = "ChangelogGui"
+inst_1.Face = Enum.NormalId.Front
+inst_1.CanvasSize = Vector2.new(800, 600)
+inst_1.LightInfluence = 0
+inst_1.Parent = script.Parent
+
+-- Sound on tab switch
+local tabSound = Instance.new("Sound")
+tabSound.Name = "TabSwitchSound"
+tabSound.SoundId = "rbxassetid://12221967"
+tabSound.Volume = 0.5
+tabSound.Parent = SoundService
+
+local inst_2 = Instance.new("Frame")
+inst_2.Name = "Background"
+inst_2.BackgroundTransparency = 0.2
+inst_2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+inst_2.BorderSizePixel = 5
+inst_2.Position = UDim2.new(0, 0, 0, 0)
+inst_2.Size = UDim2.new(1, 0, 1, 0)
+inst_2.AnchorPoint = Vector2.new(0, 0)
+inst_2.Visible = true
+inst_2.ZIndex = 1
+inst_2.ClipsDescendants = true
+inst_2.Parent = inst_1
+
+local inst_3 = Instance.new("Frame")
+inst_3.Name = "Header"
+inst_3.BackgroundTransparency = 1
+inst_3.Position = UDim2.new(0, 0, 0, 0)
+inst_3.Size = UDim2.new(1, 0, 0, 50)
+inst_3.Parent = inst_2
+
+local inst_4 = Instance.new("TextLabel")
+inst_4.Name = "Title"
+inst_4.BackgroundTransparency = 1
+inst_4.Position = UDim2.new(0, 10, 0, 0)
+inst_4.Size = UDim2.new(0, 200, 1, 0)
+inst_4.Text = "CHANGELOGS"
+inst_4.TextColor3 = Color3.fromRGB(255, 255, 255)
+inst_4.TextSize = 28
+inst_4.Font = Enum.Font.SourceSans
+inst_4.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+inst_4.TextXAlignment = Enum.TextXAlignment.Left
+inst_4.Parent = inst_3
+
+local inst_5 = Instance.new("ScrollingFrame")
+inst_5.Name = "TabNav"
+inst_5.BackgroundTransparency = 1
+inst_5.Position = UDim2.new(0, 210, 0, 8)
+inst_5.Size = UDim2.new(1, -220, 1, -16)
+inst_5.ScrollBarThickness = 6
+inst_5.CanvasSize = UDim2.new(0, 0, 0, 0)
+inst_5.ClipsDescendants = true
+inst_5.Parent = inst_3
+
+local inst_6 = Instance.new("UIListLayout")
+inst_6.Name = "TabLayout"
+inst_6.FillDirection = Enum.FillDirection.Horizontal
+inst_6.SortOrder = Enum.SortOrder.LayoutOrder
+inst_6.Padding = UDim.new(0, 4)
+inst_6.Parent = inst_5
+
+local inst_7 = Instance.new("ScrollingFrame")
+inst_7.Name = "ContentScroll"
+inst_7.BackgroundTransparency = 1
+inst_7.Position = UDim2.new(0, 10, 0, 55)
+inst_7.Size = UDim2.new(1, -20, 1, -65)
+inst_7.ScrollBarThickness = 8
+inst_7.CanvasSize = UDim2.new(0, 0, 0, 0)
+inst_7.ClipsDescendants = true
+inst_7.Parent = inst_2
+
+local inst_8 = Instance.new("UIListLayout")
+inst_8.Name = "ContentLayout"
+inst_8.SortOrder = Enum.SortOrder.LayoutOrder
+inst_8.Parent = inst_7
+
+-- Fixed and re-indexed version history
+${tableStr}
+
+local tabs = {}
+
+local function updateScrollCanvas()
+	inst_7.CanvasSize = UDim2.new(0, 0, 0, inst_8.AbsoluteContentSize.Y + 20)
+end
+
+inst_8:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateScrollCanvas)
+
+inst_6:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	inst_5.CanvasSize = UDim2.new(0, inst_6.AbsoluteContentSize.X + 10, 0, 0)
+end)
+
+local function switchTab(selectedVersion, playAudio)
+	if playAudio then
+		tabSound:Play()
+	end
+
+	for ver, data in pairs(tabs) do
+		local isTarget = (ver == selectedVersion)
+		data.Frame.Visible = isTarget
+
+		if isTarget then
+			data.Button.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+			data.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+		else
+			data.Button.BackgroundColor3 = Color3.fromRGB(134, 134, 134)
+			data.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		end
+	end
+	task.defer(updateScrollCanvas)
+end
+
+for i, verGroup in ipairs(versionData) do
+	local mainVer = verGroup.Tab
+	local patches = verGroup.Patches
+
+	local inst_btn = Instance.new("TextButton")
+	inst_btn.Name = "Tab_" .. i
+	inst_btn.Size = UDim2.new(0, 80, 1, 0)
+	inst_btn.BackgroundColor3 = Color3.fromRGB(134, 134, 134)
+	inst_btn.BorderSizePixel = 0
+	inst_btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	inst_btn.Text = mainVer
+	inst_btn.Font = Enum.Font.SourceSans
+	inst_btn.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+	inst_btn.TextSize = 22
+	inst_btn.AutoButtonColor = true
+	inst_btn.Active = true
+	inst_btn.Parent = inst_5
+
+	local inst_frame = Instance.new("Frame")
+	inst_frame.Name = "VersionFrame_" .. i
+	inst_frame.Size = UDim2.new(1, -16, 0, 0)
+	inst_frame.AutomaticSize = Enum.AutomaticSize.Y
+	inst_frame.BackgroundTransparency = 1
+	inst_frame.Visible = false
+	inst_frame.LayoutOrder = i
+	inst_frame.Parent = inst_7
+
+	local inst_textLayout = Instance.new("UIListLayout")
+	inst_textLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	inst_textLayout.Padding = UDim.new(0, 12)
+	inst_textLayout.Parent = inst_frame
+
+	for _, patch in ipairs(patches) do
+		local patchGroup = Instance.new("Frame")
+		patchGroup.Name = "PatchGroup"
+		patchGroup.Size = UDim2.new(1, 0, 0, 0)
+		patchGroup.AutomaticSize = Enum.AutomaticSize.Y
+		patchGroup.BackgroundTransparency = 1
+		patchGroup.Parent = inst_frame
+
+		local patchLayout = Instance.new("UIListLayout")
+		patchLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		patchLayout.Padding = UDim.new(0, 4)
+		patchLayout.Parent = patchGroup
+
+		local inst_headerLabel = Instance.new("TextLabel")
+		inst_headerLabel.Name = "HeaderLabel"
+		inst_headerLabel.Size = UDim2.new(1, 0, 0, 24)
+		inst_headerLabel.BackgroundTransparency = 1
+		inst_headerLabel.Text = patch.Header
+		inst_headerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		inst_headerLabel.TextSize = 22
+		inst_headerLabel.Font = Enum.Font.SourceSans
+		inst_headerLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+		inst_headerLabel.TextXAlignment = Enum.TextXAlignment.Left
+		inst_headerLabel.Parent = patchGroup
+
+		local inst_bodyLabel = Instance.new("TextLabel")
+		inst_bodyLabel.Name = "BodyLabel"
+		inst_bodyLabel.Size = UDim2.new(1, 0, 0, 0)
+		inst_bodyLabel.AutomaticSize = Enum.AutomaticSize.Y
+		inst_bodyLabel.BackgroundTransparency = 1
+		inst_bodyLabel.Text = patch.Body
+		inst_bodyLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
+		inst_bodyLabel.TextSize = 18
+		inst_bodyLabel.Font = Enum.Font.SourceSans
+		inst_bodyLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+		inst_bodyLabel.TextXAlignment = Enum.TextXAlignment.Left
+		inst_bodyLabel.TextYAlignment = Enum.TextYAlignment.Top
+		inst_bodyLabel.TextWrapped = true
+		inst_bodyLabel.Parent = patchGroup
+	end
+
+	tabs[mainVer] = {
+		Button = inst_btn,
+		Frame = inst_frame
+	}
+
+	inst_btn.MouseButton1Click:Connect(function()
+		switchTab(mainVer, true)
+	end)
+end
+
+if #versionData > 0 then
+	switchTab(versionData[#versionData].Tab, false)
+end`;
+}
+
+function openExportModal() {
+    document.getElementById('modalTitle').innerText = "Export Lua Script";
+    document.getElementById('modalDesc').innerText = "Copy the full generated Roblox Lua script below:";
+    document.getElementById('luaCodeBox').value = getFullLuaScript();
+    document.getElementById('modalFooter').innerHTML = `
+        <button onclick="copyLuaCode()">Copy to Clipboard</button>
+        <button class="secondary" onclick="closeModal()">Close</button>
+    `;
+    document.getElementById('luaModal').style.display = 'flex';
+}
+
+function openImportModal() {
+    document.getElementById('modalTitle').innerText = "Import Lua Script";
+    document.getElementById('modalDesc').innerText = "Paste your full Roblox Lua script below to load existing versions and patches:";
+    document.getElementById('luaCodeBox').value = "";
+    document.getElementById('luaCodeBox').readOnly = false;
+    document.getElementById('modalFooter').innerHTML = `
+        <button onclick="processImport()">Import Script</button>
+        <button class="secondary" onclick="closeModal()">Close</button>
+    `;
+    document.getElementById('luaModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('luaModal').style.display = 'none';
+    document.getElementById('luaCodeBox').readOnly = true;
+}
+
+function copyLuaCode() {
+    const box = document.getElementById('luaCodeBox');
+    box.select();
+    navigator.clipboard.writeText(box.value);
+    alert("Copied to clipboard!");
+}
+
+function processImport() {
+    const code = document.getElementById('luaCodeBox').value;
+    try {
+        const match = code.match(/local\s+versionData\s*=\s*(\{[\s\S]*?\n\})/);
+        if (!match) {
+            alert("Could not find 'local versionData = { ... }' in the pasted script.");
+            return;
+        }
+        
+        let cleaned = match[1]
+            .replace(/--.*$/gm, '')
+            .replace(/([a-zA-Z0-9_]+)\s*=/g, '"$1":')
+            .replace(/'/g, '"')
+            .replace(/,\s*([\]\}])/g, '$1');
+
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed)) {
+            versionData = parsed;
+            if (versionData.length > 0) activeTab = versionData[versionData.length - 1].Tab;
+            render();
+            closeModal();
+            alert("Successfully imported version data!");
+        } else {
+            alert("Parsed data is not a valid version array.");
+        }
+    } catch (e) {
+        alert("Failed to parse Lua table. Make sure the format matches standard Luau tables.\nError: " + e.message);
+    }
+}
+
+loadFromStorage();
+render();
+</script>
+</body>
+</html>
