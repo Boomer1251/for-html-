@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aero Glyph Explorer</title>
+    <style>
+        :root {
+            --aero-bg-top: #0a3d62;
+            --aero-bg-bottom: #00bcd4;
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 31, 63, 0.37);
+            --text-color: #042035;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #021B29 0%, #085078 40%, #85D8CE 80%, #E0F7FA 100%);
+            background-attachment: fixed;
+            color: var(--text-color);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Aero floating orb decorations */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(0, 188, 212, 0.4) 60%, rgba(0, 150, 136, 0.8));
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.2), 0 0 30px rgba(255,255,255,0.5);
+        }
+        body::before { width: 300px; height: 300px; top: -50px; left: -50px; }
+        body::after { width: 400px; height: 400px; bottom: -100px; right: -100px; }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            z-index: 1;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Glossy shine overlay */
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.05) 100%);
+            border-radius: 20px 20px 0 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #022c43;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+            margin-bottom: 0.5rem;
+        }
+
+        p.subtitle {
+            color: #085078;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-bar {
+            width: 100%;
+            max-width: 500px;
+            padding: 0.8rem 1.5rem;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            font-size: 1rem;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .search-bar:focus {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 15px rgba(0, 188, 212, 0.6);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.35);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.2rem;
+            box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.8);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px 0 rgba(0, 31, 63, 0.45), inset 0 1px 0 rgba(255,255,255,0.9);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 40%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .target-letter {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #013a63;
+            background: rgba(255, 255, 255, 0.5);
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .glyphs-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .glyph-btn {
+            background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 100%);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08), inset 0 1px 0 #ffffff;
+            transition: all 0.15s ease;
+            min-width: 45px;
+        }
+
+        .glyph-btn:hover {
+            background: linear-gradient(180deg, #ffffff 0%, #bae6fd 100%);
+            transform: scale(1.05);
+            border-color: #0284c7;
+        }
+
+        .glyph-btn:active {
+            transform: scale(0.95);
+        }
+
+        .char {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #0369a1;
+        }
+
+        .code {
+            font-size: 0.65rem;
+            color: #64748b;
+            font-family: monospace;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(2, 132, 199, 0.9);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.4);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Unicode Lookalike Engine</h1>
+        <p class="subtitle">Click any glyph to copy it directly to your clipboard</p>
+        <input type="text" id="searchInput" class="search-bar" placeholder="Filter by letter (e.g. A, b, C)...">
+    </header>
+
+    <div class="grid" id="glyphGrid"></div>
+</div>
+
+<div class="toast" id="toast">Copied to clipboard!</div>
+
+<script>
+    // Comprehensive homoglyphs mapping (Lowercase & Uppercase)
+    const homoglyphs = {
+        'A': ['А', 'A', 'Α', 'Ꭺ', 'ᗅ', 'ꓮ'],
+        'a': ['а', 'a', 'α', 'a', 'a', 'a'],
+        'B': ['В', 'Β', 'Ᏼ', 'ᖲ', 'ꓯ'],
+        'b': ['b', 'b', 'Ь', 'b', 'b'],
+        'C': ['С', 'Ϲ', 'Ⅽ', 'Ꮯ', 'ℂ'],
+        'c': ['с', 'c', 'ϲ', 'c', 'c'],
+        'E': ['Е', 'Ε', 'Ꭼ', 'ℰ', '꓿'],
+        'e': ['е', 'e', 'e', 'e', 'e'],
+        'H': ['Н', 'Η', 'ℋ', 'Ꮋ', 'ꓧ'],
+        'h': ['h', 'h', 'h', 'h', 'h'],
+        'I': ['І', 'Ι', 'Ⅰ', 'I', 'Ӏ', 'ꓲ'],
+        'i': ['і', 'i', 'ι', 'i', 'i'],
+        'K': ['К', 'Κ', 'K', 'ꓗ'],
+        'k': ['k', 'k', 'k', 'k'],
+        'M': ['М', 'Μ', 'ℳ', 'Ꮇ', 'ꓟ'],
+        'm': ['m', 'm', 'm', 'm'],
+        'O': ['О', 'Ο', 'Օ', 'Օ', 'ℴ', '〇'],
+        'o': ['о', 'ο', 'o', 'o', 'o'],
+        'P': ['Р', 'Ρ', 'Ⲣ', 'ꓑ'],
+        'p': ['р', 'p', 'p', 'p'],
+        'T': ['Т', 'Τ', '⊤', 'ꓠ'],
+        't': ['t', 't', 't', 't'],
+        'X': ['Х', 'Χ', 'Ⅹ', 'ⵝ', 'ꓫ'],
+        'x': ['х', 'x', 'x', 'x'],
+        'Y': ['Ү', 'Υ', 'Y', 'ꓬ'],
+        'y': ['у', 'y', 'y', 'y']
+    };
+
+    const grid = document.getElementById('glyphGrid');
+    const toast = document.getElementById('toast');
+    const searchInput = document.getElementById('searchInput');
+
+    function renderGrid(filter = '') {
+        grid.innerHTML = '';
+        Object.keys(homoglyphs).forEach(letter => {
+            if (filter && letter.toLowerCase() !== filter.toLowerCase()) return;
+
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.innerHTML = `<div class="target-letter">${letter}</div><span style="font-size: 0.85rem; opacity: 0.8;">${letter === letter.toUpperCase() ? 'Uppercase' : 'Lowercase'}</span>`;
+
+            const container = document.createElement('div');
+            container.className = 'glyphs-container';
+
+            homoglyphs[letter].forEach(char => {
+                const codePoint = 'U+' + char.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+                const btn = document.createElement('button');
+                btn.className = 'glyph-btn';
+                btn.innerHTML = `<span class="char">${char}</span><span class="code">${codePoint}</span>`;
+                
+                btn.onclick = () => {
+                    navigator.clipboard.writeText(char);
+                    showToast(`Copied '${char}' (${codePoint})`);
+                };
+
+                container.appendChild(btn);
+            });
+
+            card.appendChild(header);
+            card.appendChild(container);
+            grid.appendChild(card);
+        });
+    }
+
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    searchInput.addEventListener('input', (e) => {
+        renderGrid(e.target.value.trim());
+    });
+
+    renderGrid();
+</script>
+
+</body>
+</html>
