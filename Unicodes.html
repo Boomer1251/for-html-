@@ -18,7 +18,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Arial, sans-serif;
         }
 
         body {
@@ -91,7 +91,7 @@
             margin-bottom: 1.5rem;
         }
 
-        .search-bar {
+        .search-bar, textarea {
             width: 100%;
             max-width: 500px;
             padding: 0.8rem 1.5rem;
@@ -100,12 +100,13 @@
             background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(8px);
             font-size: 1rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Arial, sans-serif;
             outline: none;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
         }
 
-        .search-bar:focus {
+        .search-bar:focus, textarea:focus {
             background: rgba(255, 255, 255, 0.85);
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 15px rgba(0, 188, 212, 0.6);
         }
@@ -200,6 +201,7 @@
             font-size: 1.2rem;
             font-weight: bold;
             color: #0369a1;
+            font-family: 'Segoe UI', Tahoma, Geneva, Arial, sans-serif;
         }
 
         .code {
@@ -241,45 +243,63 @@
         <input type="text" id="searchInput" class="search-bar" placeholder="Filter by letter (e.g. A, b, C)...">
     </header>
 
+    <!-- Translator Card -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <div class="card-header">
+            <div class="target-letter" style="font-size: 1.2rem; width: auto; padding: 0 1rem;">🔀 Bypass Translator</div>
+            <span style="font-size: 0.85rem; opacity: 0.8;">Case-sensitive clean homoglyph substitution</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div>
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: #085078;">Input Text</label>
+                <textarea id="translateInput" style="width: 100%; height: 100px; border-radius: 12px; resize: vertical;" placeholder="Type text here..."></textarea>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: #085078;">Bypassed Output</label>
+                <textarea id="translateOutput" style="width: 100%; height: 100px; border-radius: 12px; resize: vertical; background: rgba(255,255,255,0.7);" readonly placeholder="Converted text appears here..."></textarea>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: center;">
+            <button id="copyOutputBtn" class="glyph-btn" style="padding: 0.6rem 1.2rem; width: auto; font-weight: 600;">Copy Output</button>
+            <span style="font-size: 0.8rem; opacity: 0.7;">Preserves exact case and font rendering.</span>
+        </div>
+    </div>
+
     <div class="grid" id="glyphGrid"></div>
 </div>
 
 <div class="toast" id="toast">Copied to clipboard!</div>
 
 <script>
-    // Comprehensive homoglyphs mapping (Lowercase & Uppercase)
+    // Clean, 1:1 font-safe homoglyphs mapping (Cyrillic equivalents that match Segoe UI perfectly)
     const homoglyphs = {
-        'A': ['А', 'A', 'Α', 'Ꭺ', 'ᗅ', 'ꓮ'],
-        'a': ['а', 'a', 'α', 'a', 'a', 'a'],
-        'B': ['В', 'Β', 'Ᏼ', 'ᖲ', 'ꓯ'],
-        'b': ['b', 'b', 'Ь', 'b', 'b'],
-        'C': ['С', 'Ϲ', 'Ⅽ', 'Ꮯ', 'ℂ'],
-        'c': ['с', 'c', 'ϲ', 'c', 'c'],
-        'E': ['Е', 'Ε', 'Ꭼ', 'ℰ', '꓿'],
-        'e': ['е', 'e', 'e', 'e', 'e'],
-        'H': ['Н', 'Η', 'ℋ', 'Ꮋ', 'ꓧ'],
-        'h': ['h', 'h', 'h', 'h', 'h'],
-        'I': ['І', 'Ι', 'Ⅰ', 'I', 'Ӏ', 'ꓲ'],
-        'i': ['і', 'i', 'ι', 'i', 'i'],
-        'K': ['К', 'Κ', 'K', 'ꓗ'],
-        'k': ['k', 'k', 'k', 'k'],
-        'M': ['М', 'Μ', 'ℳ', 'Ꮇ', 'ꓟ'],
-        'm': ['m', 'm', 'm', 'm'],
-        'O': ['О', 'Ο', 'Օ', 'Օ', 'ℴ', '〇'],
-        'o': ['о', 'ο', 'o', 'o', 'o'],
-        'P': ['Р', 'Ρ', 'Ⲣ', 'ꓑ'],
-        'p': ['р', 'p', 'p', 'p'],
-        'T': ['Т', 'Τ', '⊤', 'ꓠ'],
-        't': ['t', 't', 't', 't'],
-        'X': ['Х', 'Χ', 'Ⅹ', 'ⵝ', 'ꓫ'],
-        'x': ['х', 'x', 'x', 'x'],
-        'Y': ['Ү', 'Υ', 'Y', 'ꓬ'],
-        'y': ['у', 'y', 'y', 'y']
+        'A': ['А'],
+        'a': ['а'],
+        'B': ['В'],
+        'C': ['С'],
+        'c': ['с'],
+        'E': ['Е'],
+        'e': ['е'],
+        'H': ['Н'],
+        'I': ['І'],
+        'i': ['і'],
+        'K': ['К'],
+        'M': ['М'],
+        'O': ['О'],
+        'o': ['о'],
+        'P': ['Р'],
+        'p': ['р'],
+        'T': ['Т'],
+        'X': ['Х'],
+        'x': ['х']
     };
 
     const grid = document.getElementById('glyphGrid');
     const toast = document.getElementById('toast');
     const searchInput = document.getElementById('searchInput');
+    const translateInput = document.getElementById('translateInput');
+    const translateOutput = document.getElementById('translateOutput');
+    const copyOutputBtn = document.getElementById('copyOutputBtn');
 
     function renderGrid(filter = '') {
         grid.innerHTML = '';
@@ -315,6 +335,25 @@
             grid.appendChild(card);
         });
     }
+
+    function translateText(text) {
+        return text.split('').map(char => {
+            if (homoglyphs[char] && homoglyphs[char].length > 0) {
+                return homoglyphs[char][0];
+            }
+            return char;
+        }).join('');
+    }
+
+    translateInput.addEventListener('input', () => {
+        translateOutput.value = translateText(translateInput.value);
+    });
+
+    copyOutputBtn.onclick = () => {
+        if (!translateOutput.value) return;
+        navigator.clipboard.writeText(translateOutput.value);
+        showToast('Copied translated text!');
+    };
 
     function showToast(msg) {
         toast.textContent = msg;
