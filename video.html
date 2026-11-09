@@ -100,7 +100,7 @@ progress{width:100%;height:16px;accent-color:var(--pink)}
       <div class="row">
         <button id="exp" class="hot">Export MP4</button>
         <select id="res" aria-label="Resolution"><option value="360">360p</option><option value="480">480p</option><option value="640" selected>640p</option><option value="720">720p</option><option value="1080">1080p</option><option value="0">Original</option></select>
-        <select id="br" aria-label="Bitrate"><option value="2500000">Low bitrate</option><option value="6000000" selected>Medium bitrate</option><option value="12000000">High bitrate</option><option value="20000000">Max bitrate</option></select>
+        <select id="br" aria-label="Bitrate"><option value="0" selected>Auto (match source)</option><option value="1500000">Small (1.5 Mbps)</option><option value="3000000">Low (3 Mbps)</option><option value="6000000">Medium (6 Mbps)</option><option value="12000000">High (12 Mbps)</option><option value="20000000">Max (20 Mbps)</option></select>
         <button id="swap">New video</button>
       </div>
       <div id="expbox" hidden>
@@ -118,7 +118,7 @@ progress{width:100%;height:16px;accent-color:var(--pink)}
         </div>
         <p class="note" id="rinfo"></p>
       </div>
-      <p class="note">Shortcuts: Space plays or pauses, arrow keys seek, F is fullscreen, M mutes, hold C to compare. MP4 and MOV files export in fast mode. Other formats play through in real time, so keep this tab in front.</p>
+      <p class="note">Shortcuts: Space plays or pauses, arrow keys seek, F is fullscreen, M mutes, hold C to compare. Exported video keeps the source frame rate, capped at 60 fps. The fps figure shown during export is processing speed, not the video's frame rate. MP4 and MOV files export in fast mode. Other formats play through in real time, so keep this tab in front.</p>
     </div>
   </section>
   <section class="card">
@@ -157,6 +157,7 @@ const P={
 const S={},D={},$=id=>document.getElementById(id);
 const AIDS=new Set(A.map(a=>a[0]));
 const IDENT=[1,0,0,1,0,0];
+const MAXFPS=60,MINGAP=1e6/MAXFPS*.95;
 function build(list,el){for(const[id,l,mn,mx,st,df]of list){S[id]=df;D[id]=df;const d=document.createElement('label');d.className='ctl';
  d.innerHTML=`<span>${l}</span><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" value="${df}"><output id="o_${id}">${df}</output>`;
  el.appendChild(d);d.querySelector('input').oninput=e=>set(id,+e.target.value)}}
@@ -499,8 +500,26 @@ async function demux(file){
    const a=Math.round(m[0]/65536),b=Math.round(m[1]/65536),c=Math.round(m[3]/65536),d=Math.round(m[4]/65536);
    if(Math.abs(a)+Math.abs(b)+Math.abs(c)+Math.abs(d)!==2||Math.abs(a*d-b*c)!==1)throw new Error('unsupported rotation');
    const rot=[a,b,c,d,-(Math.min(0,a)+Math.min(0,c)),-(Math.min(0,b)+Math.min(0,d))];
-   resolve({track,samples,desc,rot})
+   /* real source frame rate: frame count over track duration */
+   const tdur=track.duration&&track.timescale?track.duration/track.timescale:0;
+   let fps=tdur>0?samples.length/tdur:0;
+   if(!(fps>=5&&fps<=240))fps=30;
+   resolve({track,samples,desc,rot,fps})
   }catch(e){reject(e)}})}
+
+/* ---------- frame rate probe (compatibility path) ---------- */
+function probeFps(a){
+ return new Promise(res=>{
+  let prev=null,min=Infinity,cnt=0,done=false,to=null;
+  const fin=()=>{if(done)return;done=true;clearTimeout(to);vid.pause();res(isFinite(min)&&min>0?Math.min(120,Math.max(10,Math.round(1/min))):30)};
+  to=setTimeout(fin,2500);
+  const cb=(now,meta)=>{
+   if(prev!==null){const dt=meta.mediaTime-prev;if(dt>.001)min=Math.min(min,dt)}
+   prev=meta.mediaTime;
+   if(++cnt>=12)return fin();
+   vid.requestVideoFrameCallback(cb)};
+  vid.currentTime=a;vid.playbackRate=1;
+  vid.play().then(()=>vid.requestVideoFrameCallback(cb)).catch(fin)})}
 
 /* ---------- export ---------- */
 function setProg(p,text){const pg=$('prog');if(p==null)pg.removeAttribute('value');else pg.value=p;if(text!=null)$('estat').textContent=text}
@@ -508,19 +527,21 @@ function busy(on){
  $('expbox').hidden=!on;$('cancel').disabled=false;
  for(const id of['exp','res','br','swap','mkin','mkout','mkclr','snap','cmp','fb','ff'])$(id).disabled=on}
 const fastOK=f=>/\.(mp4|m4v|mov)$/i.test(f.name)||/mp4|quicktime/.test(f.type);
-function newEnc(W,H,vcodec,acodec,rend,br){
+/* output frame rate: source rate times speed, capped at 60 */
+const outFps=(srcFps,sp)=>Math.max(10,Math.min(MAXFPS,Math.round(srcFps*sp)));
+function newEnc(W,H,vcodec,acodec,rend,br,fps){
  const target=new Mp4Muxer.ArrayBufferTarget(),enc={target,err:null};
  enc.mux=new Mp4Muxer.Muxer({target,fastStart:'in-memory',firstTimestampBehavior:'offset',video:{codec:'avc',width:W,height:H},...(acodec?{audio:{codec:acodec[1],numberOfChannels:2,sampleRate:rend.sampleRate}}:{})});
  enc.ve=new VideoEncoder({output:(c,m)=>enc.mux.addVideoChunk(c,m),error:e=>{enc.err=e}});
- enc.ve.configure({codec:vcodec,width:W,height:H,bitrate:br,framerate:30});
+ enc.ve.configure({codec:vcodec,width:W,height:H,bitrate:br,framerate:fps});
  return enc}
-async function runFast(enc,s,a,b,sp,prog){
- const info=await demux(curFile),{track,samples,desc,rot}=info;
+async function runFast(enc,s,a,b,sp,prog,info){
+ const{track,samples,desc,rot}=info;
  const cfg={codec:track.codec,codedWidth:track.video.width,codedHeight:track.video.height};if(desc)cfg.description=desc;
  const sup=await VideoDecoder.isConfigSupported(cfg);
  if(!sup.supported)throw new Error('this browser can’t decode '+track.codec);
  rotU=rot;clearTargets();
- let first=null,n=0,fed=0,processed=0,derr=null,lastProg=performance.now();
+ let first=null,n=0,fed=0,processed=0,derr=null,lastProg=performance.now(),lastTs=-1e9;
  const dec=new VideoDecoder({
   output:frame=>{
    try{
@@ -529,6 +550,9 @@ async function runFast(enc,s,a,b,sp,prog){
     if(t<a-1e-4||t>=b){frame.close();return}
     if(first===null)first=t;
     const ts=Math.round((t-first)/sp*1e6);
+    /* frame cap: drop frames that would push output above 60 fps */
+    if(ts-lastTs<MINGAP){frame.close();return}
+    lastTs=ts;
     render(frame,t,n,s);
     const vf=new VideoFrame(glc,{timestamp:ts});enc.ve.encode(vf,{keyFrame:n%60===0});vf.close();frame.close();n++;
     if(n%4===0)prog((t-a)/(b-a),n)
@@ -553,7 +577,7 @@ async function runFast(enc,s,a,b,sp,prog){
  return n}
 async function runSlow(enc,s,a,b,sp,prog){
  vid.loop=false;vid.muted=true;vid.currentTime=a;await once(vid,'seeked');
- let first=null,last=-1,n=0,pm=null,srcDur=Infinity,rate=1,lastCb=performance.now();
+ let first=null,last=-1e9,n=0,pm=null,srcDur=Infinity,rate=1,lastCb=performance.now();
  await new Promise((res,rej)=>{
   let fin=false;
   const finish=e=>{if(fin)return;fin=true;clearInterval(wd);vid.removeEventListener('ended',onEnd);vid.pause();e?rej(e):res()};
@@ -569,7 +593,7 @@ async function runSlow(enc,s,a,b,sp,prog){
    try{
     if(first===null)first=mt;
     const ts=Math.round((mt-first)/sp*1e6);
-    if(ts>last){render(vid,mt,n,s);const vf=new VideoFrame(glc,{timestamp:ts});enc.ve.encode(vf,{keyFrame:n%60===0});vf.close();last=ts;n++}
+    if(ts-last>=MINGAP){render(vid,mt,n,s);const vf=new VideoFrame(glc,{timestamp:ts});enc.ve.encode(vf,{keyFrame:n%60===0});vf.close();last=ts;n++}
    }catch(e){return finish(e)}
    if(pm!==null){const dt=mt-pm;if(dt>.001){srcDur=Math.min(srcDur,dt);rate=dt>srcDur*1.6?Math.max(1,rate*.8):Math.min(8,rate*1.04)}}
    pm=mt;if(enc.ve.encodeQueueSize>10)rate=Math.max(.5,rate*.5);
@@ -588,10 +612,25 @@ async function exportMp4(){
  exporting=true;cancelled=false;bypass=false;busy(true);vid.pause();
  const savedMuted=vid.muted,savedGain=master?master.gain.value:1;
  if(master)master.gain.value=0;
- const t0=performance.now();let mode='fast',enc=null,ok=false;
+ const t0=performance.now();let mode='fast',enc=null,ok=false,fps=30;
  try{
-  const W=glc.width,H=glc.height,s={...S},sp=s.speed,a=inT,b=rangeEnd(),br=+$('br').value,dur=b-a;
+  const W=glc.width,H=glc.height,s={...S},sp=s.speed,a=inT,b=rangeEnd(),dur=b-a;
   if(dur<.1)throw new Error('The export range is too short.');
+  /* bitrate: "Auto" scales the source's own bitrate by output size, so a 10 MB clip stays near 10 MB */
+  let br=+$('br').value,brNote='';
+  if(!br){
+   const srcBps=curFile.size*8/Math.max(.1,vid.duration),ratio=Math.min(1,(W*H)/Math.max(1,vid.videoWidth*vid.videoHeight));
+   br=Math.round(Math.min(20e6,Math.max(1e6,srcBps*1.2*ratio)));brNote=' (auto)'}
+  setProg(null,'Reading video…');
+  let info=null,srcFps=30;
+  if(fastOK(curFile)){
+   try{info=await demux(curFile);srcFps=info.fps}
+   catch(e){console.warn('Fast demux failed',e);mode='compat';say('Fast mode didn’t work for this file ('+(e&&e.message||e)+'), so it is playing through instead.')}
+  }else mode='compat';
+  if(cancelled)throw new Error('cancelled');
+  if(!info){setProg(null,'Detecting frame rate…');srcFps=await probeFps(a)}
+  if(cancelled)throw new Error('cancelled');
+  fps=outFps(srcFps,sp);
   setProg(null,'Processing sound…');
   let aBuf=null,rend=null;
   try{const tmp=new (window.AudioContext||window.webkitAudioContext)();aBuf=await tmp.decodeAudioData(await curFile.arrayBuffer());tmp.close()}catch(e){aBuf=null}
@@ -606,21 +645,21 @@ async function exportMp4(){
   if(!vcodec)throw new Error('No H.264 encoder available at this size. Try a lower resolution.');
   let acodec=null;
   if(rend)for(const[c,m]of[['mp4a.40.2','aac'],['opus','opus']]){const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:rend.sampleRate,numberOfChannels:2,bitrate:128000});if(r.supported){acodec=[c,m];break}}
-  enc=newEnc(W,H,vcodec,acodec,rend,br);
+  enc=newEnc(W,H,vcodec,acodec,rend,br,fps);
   const tv=performance.now();
   const prog=(p,n)=>{
    p=Math.max(0,Math.min(1,p));const el=(performance.now()-tv)/1000;
-   setProg(p*.88,'Rendering video '+Math.round(p*100)+'%'+(el>.5?' · '+(dur*p/el).toFixed(1)+'x realtime · '+Math.round(n/el)+' fps':'')+(p>.03?' · about '+Math.max(1,Math.round(el*(1-p)/p))+' s left':'')+(mode==='fast'?'':' · compatibility mode'))};
+   setProg(p*.88,'Rendering video '+Math.round(p*100)+'%'+(el>.5?' · processing at '+(dur*p/el).toFixed(1)+'x realtime ('+Math.round(n/el)+' frames/s)':'')+(p>.03?' · about '+Math.max(1,Math.round(el*(1-p)/p))+' s left':'')+(mode==='fast'?'':' · compatibility mode'))};
   setProg(0,'Rendering video…');
-  if(fastOK(curFile)){
-   try{await runFast(enc,s,a,b,sp,prog);ok=true}
+  if(info){
+   try{await runFast(enc,s,a,b,sp,prog,info);ok=true}
    catch(e){
     if(cancelled)throw e;
     console.warn('Fast export failed',e);mode='compat';
     try{enc.ve.close()}catch(_){}
-    enc=newEnc(W,H,vcodec,acodec,rend,br);
+    enc=newEnc(W,H,vcodec,acodec,rend,br,fps);
     say('Fast mode didn’t work for this file ('+(e&&e.message||e)+'), so it is playing through instead.')}
-  }else mode='compat';
+  }
   if(!ok){rotU=IDENT;clearTargets();await runSlow(enc,s,a,b,sp,prog)}
   rotU=IDENT;
   setProg(.88,'Finishing video…');
@@ -642,7 +681,7 @@ async function exportMp4(){
   resBlob=new Blob([enc.target.buffer],{type:'video/mp4'});
   resName=(curFile.name.replace(/\.[^.]+$/,'')||'video')+'-warped.mp4';
   resUrl=URL.createObjectURL(resBlob);$('resv').src=resUrl;$('result').hidden=false;
-  $('rinfo').textContent=(resBlob.size/1048576).toFixed(1)+' MB · '+W+'x'+H+' · '+(mode==='fast'?'fast mode':'compatibility mode')+' · took '+Math.round((performance.now()-t0)/1000)+' s'+(rend?'':' · this video’s sound couldn’t be read, so it has no audio');
+  $('rinfo').textContent=(resBlob.size/1048576).toFixed(1)+' MB · '+W+'x'+H+' · '+fps+' fps · '+(br/1e6).toFixed(1)+' Mbps'+brNote+' · '+(mode==='fast'?'fast mode':'compatibility mode')+' · took '+Math.round((performance.now()-t0)/1000)+' s'+(rend?'':' · this video’s sound couldn’t be read, so it has no audio');
   say('Done. Press Save MP4, or right-click the video and choose Save video as.');
   $('result').scrollIntoView({block:'nearest',behavior:'smooth'});
  }catch(e){
