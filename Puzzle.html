@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Generator Puzzle (Copy)</title>
+<style>
+:root{--bg:#e9e7e2;--panel:#1b1b1d;--panel2:#2a2a2d;--text:#1b1b1d;--muted:#5d5d63;--btn:#1b1b1d;--btnt:#f4f4f2;--red:#ee0000;--green:#00ee00;--ring:#ffcf33;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f0f11;--panel:#1b1b1d;--panel2:#2f2f33;--text:#f1f1ee;--muted:#a0a0a8;--btn:#f1f1ee;--btnt:#111;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f0f11;--panel:#1b1b1d;--panel2:#2f2f33;--text:#f1f1ee;--muted:#a0a0a8;--btn:#f1f1ee;--btnt:#111;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;justify-content:center;padding:20px 16px}
+main{width:100%;max-width:560px}
+h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:-.01em}
+p.sub{margin:0 0 18px;color:var(--muted);line-height:1.5}
+.gen{position:relative;background:#0a0a0b;border-radius:26px;padding:16px 16px 50px;border:10px solid #1a1a1c;box-shadow:0 0 0 2px #333336,0 10px 0 rgba(0,0,0,.35),inset 0 0 0 2px #26262a}
+.gen::before{content:"";position:absolute;left:20px;bottom:16px;width:20px;height:20px;border-radius:50%;background:#4a0808;box-shadow:inset 0 0 0 3px #2a0505}
+.gen::after{content:"";position:absolute;right:20px;bottom:14px;width:96px;height:24px;border-radius:3px;background:repeating-linear-gradient(90deg,#050505 0 4px,#2a2a2d 4px 7px)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:#000;padding:10px;border:4px solid #1c1c1e;border-radius:4px}
+.tile{aspect-ratio:1/1.05;border:0;border-radius:0;cursor:pointer;background:var(--red);transition:background .12s,transform .08s;position:relative;padding:0}
+.tile.g{background:var(--green)}
+.tile:active{transform:scale(.95)}
+.tile:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.tile.hint::after{content:"";position:absolute;inset:34%;border-radius:50%;background:#111;box-shadow:0 0 0 3px #fff}
+.bar{display:flex;justify-content:space-between;align-items:center;margin:14px 2px 0;color:#d9d9d6;font-variant-numeric:tabular-nums;font-size:.95rem}
+.msg{min-height:1.6em;margin:14px 0 4px;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button.b{background:var(--btn);color:var(--btnt);border:0;border-radius:8px;padding:11px 16px;font-size:.95rem;font-weight:600;cursor:pointer}
+button.b:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.how{margin-top:20px;color:var(--muted);line-height:1.55;font-size:.95rem}
+@media (prefers-reduced-motion:reduce){.tile{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Generator puzzle</h1>
+<p class="sub">Turn every tile green. Clicking a tile flips it and the tiles directly above, below, left and right of it.</p>
+<div class="gen">
+  <div class="grid" id="grid" role="group" aria-label="Puzzle board"></div>
+  <div class="bar"><span id="moves">Clicks: 0</span><span id="par"></span></div>
+</div>
+<div class="msg" id="msg" aria-live="polite"></div>
+<div class="row">
+  <button class="b" id="new">New puzzle</button>
+  <button class="b" id="reset">Reset</button>
+  <button class="b" id="hint">Show solution</button>
+  <button class="b" id="mode">Set up board</button>
+</div>
+<p class="how">Each tile only needs to be clicked once, or not at all. Clicking the same tile twice cancels out. Stuck? Show solution marks the tiles to click.<br><br><strong>Solver:</strong> press Set up board, then click each tile to flip it between red and green until the board matches your generator. Dots show exactly which tiles to click on the real one. Press Play this board to try it here.</p>
+</main>
+<script>
+const R=2,C=4,N=R*C;
+let start=[],board=[],clicks=0,solution=[],showHint=false,setup=false;
+const grid=document.getElementById('grid');
+const tiles=[];
+for(let i=0;i<N;i++){
+  const t=document.createElement('button');
+  t.className='tile';t.setAttribute('aria-label','Tile '+(i+1));
+  t.addEventListener('click',()=>press(i));
+  grid.appendChild(t);tiles.push(t);
+}
+function flip(b,i){
+  const r=Math.floor(i/C),c=i%C;
+  [[0,0],[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
+    const rr=r+dr,cc=c+dc;
+    if(rr>=0&&rr<R&&cc>=0&&cc<C)b[rr*C+cc]^=1;
+  });
+}
+function solve(b){
+  let best=null;
+  for(let m=0;m<(1<<N);m++){
+    const g=b.slice(),picks=[];
+    for(let i=0;i<N;i++)if(m>>i&1){flip(g,i);picks.push(i)}
+    if(g.every(v=>v===1)&&(!best||picks.length<best.length))best=picks;
+  }
+  return best||[];
+}
+function newPuzzle(){
+  do{
+    const b=Array(N).fill(1);
+    for(let i=0;i<N;i++)if(Math.random()<.5)flip(b,i);
+    start=b;
+  }while(start.every(v=>v===1));
+  load();
+}
+function load(){
+  board=start.slice();clicks=0;showHint=false;setup=false;
+  document.getElementById('mode').textContent='Set up board';
+  solution=solve(board);
+  document.getElementById('hint').textContent='Show solution';
+  document.getElementById('par').textContent='Fewest clicks: '+solution.length;
+  document.getElementById('msg').textContent='';
+  render();
+}
+function updateSetup(){
+  solution=solve(board);
+  document.getElementById('par').textContent='Fewest clicks: '+solution.length;
+  document.getElementById('msg').textContent=board.every(v=>v===1)?'Already all green. Nothing to click.':'Click the tiles with a dot on your real generator, in any order.';
+  render();
+}
+function press(i){
+  if(setup){board[i]^=1;start=board.slice();updateSetup();return;}
+  if(board.every(v=>v===1))return;
+  flip(board,i);clicks++;
+  solution=solve(board);
+  render();
+  if(board.every(v=>v===1)){
+    const par=solve(start).length;
+    document.getElementById('msg').textContent=clicks<=par?'Generator running. Perfect, '+clicks+' clicks.':'Generator running in '+clicks+' clicks. Fewest possible: '+par+'.';
+  }
+}
+function render(){
+  tiles.forEach((t,i)=>{
+    t.classList.toggle('g',board[i]===1);
+    t.classList.toggle('hint',showHint&&solution.includes(i)&&!board.every(v=>v===1));
+  });
+  document.getElementById('moves').textContent='Clicks: '+clicks;
+}
+document.getElementById('new').onclick=newPuzzle;
+document.getElementById('reset').onclick=load;
+document.getElementById('hint').onclick=function(){
+  showHint=!showHint;this.textContent=showHint?'Hide solution':'Show solution';render();
+};
+document.getElementById('mode').onclick=function(){
+  if(setup){start=board.slice();load();return;}
+  setup=true;showHint=true;clicks=0;start=board.slice();
+  this.textContent='Play this board';
+  document.getElementById('hint').textContent='Hide solution';
+  updateSetup();
+};
+newPuzzle();
+</script>
+</body>
+</html>
