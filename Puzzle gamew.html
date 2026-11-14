@@ -7,22 +7,20 @@
 <style>
   :root {
     --bg: #07090e;
-    --bg-grad: radial-gradient(circle at 50% 0%, #162038 0%, #07090e 70%);
-    --panel: rgba(20, 27, 45, 0.65);
+    --bg-grad: radial-gradient(circle at 50% 0%, #162038 0%, #07090e 75%);
+    --panel: rgba(18, 24, 38, 0.85);
     --panel-border: rgba(255, 255, 255, 0.12);
-    --panel-highlight: rgba(255, 255, 255, 0.25);
     --text: #f0f4fc;
     --muted: #8a99b8;
     --accent: #00e5ff;
-    --accent-glow: rgba(0, 229, 255, 0.4);
+    --accent-glow: rgba(0, 229, 255, 0.35);
     --ok: #00ff88;
-    --warn: #ffaa00;
     --danger: #ff3366;
     --ring: #00e5ff;
     --off: #d91e36;
     --off-glow: rgba(217, 30, 54, 0.35);
     --on: #00e676;
-    --on-glow: rgba(0, 230, 118, 0.5);
+    --on-glow: rgba(0, 230, 118, 0.45);
     --bez: #0b0e17;
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
@@ -48,32 +46,19 @@
     overflow-x: hidden;
   }
 
-  /* Subtle ambient grid */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: 
-      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-    background-size: 32px 32px;
-    pointer-events: none;
-    z-index: -1;
-  }
-
   main {
     max-width: 760px;
     margin: 0 auto;
     position: relative;
   }
 
-  /* Glassmorphism Panels */
+  /* Lightweight Glass Panels (no expensive continuous repaints) */
   .glass {
     background: var(--panel);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid var(--panel-border);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 var(--panel-highlight);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
   }
 
   .top {
@@ -97,13 +82,7 @@
     height: 10px;
     border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 0 12px var(--accent);
-    animation: pulse 2s infinite ease-in-out;
-  }
-
-  @keyframes pulse {
-    0%, 100% { transform: scale(0.9); opacity: 0.7; }
-    50% { transform: scale(1.2); opacity: 1; }
+    box-shadow: 0 0 10px var(--accent);
   }
 
   .ttl {
@@ -111,9 +90,7 @@
     font-size: 1.2rem;
     font-weight: 800;
     letter-spacing: 0.5px;
-    background: linear-gradient(135deg, #ffffff 0%, #a5c4ff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #fff;
   }
 
   .wrap {
@@ -139,11 +116,10 @@
   }
 
   .big .num {
-    font-size: 2.4rem;
+    font-size: 2.3rem;
     font-weight: 900;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 20px rgba(255, 160, 0, 0.4);
   }
 
   .lbl {
@@ -162,24 +138,16 @@
     padding: 2px 0;
   }
 
-  .kv span {
-    color: var(--muted);
-  }
+  .kv span { color: var(--muted); }
+  .kv b { font-variant-numeric: tabular-nums; font-weight: 700; }
 
-  .kv b {
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  /* Glossy Frutiger/Cyber Buttons */
   button {
     font: inherit;
-    transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.08s ease, background 0.12s ease, border-color 0.12s ease;
   }
 
   button.b {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.05) 100%), var(--accent);
+    background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%), var(--accent);
     color: #050811;
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 11px;
@@ -187,23 +155,16 @@
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 14px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 12px var(--accent-glow);
   }
 
-  button.b:hover:not(:disabled) {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
-  }
-
-  button.b:active:not(:disabled) {
-    transform: translateY(1px) scale(0.97);
-  }
+  button.b:active:not(:disabled) { transform: scale(0.96); }
 
   button.b.alt {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text);
     border: 1px solid var(--panel-border);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: none;
   }
 
   button.b.alt:hover:not(:disabled) {
@@ -212,17 +173,15 @@
   }
 
   button.b.sel {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%), var(--accent);
+    background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 100%), var(--accent);
     color: #050811;
     border-color: #fff;
-    box-shadow: 0 0 16px var(--accent-glow);
   }
 
   button.b.blitz-active {
     background: linear-gradient(180deg, #ff5e7e 0%, #d91e36 100%);
     color: #fff;
     border-color: #ff9eb0;
-    box-shadow: 0 0 18px rgba(255, 51, 102, 0.6);
   }
 
   button.b.sm {
@@ -234,7 +193,6 @@
   button.b:disabled {
     opacity: 0.35;
     cursor: not-allowed;
-    box-shadow: none;
   }
 
   button:focus-visible {
@@ -242,67 +200,47 @@
     outline-offset: 2px;
   }
 
-  .row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .modes { margin-bottom: 14px; align-items: center; }
 
-  .modes {
-    margin-bottom: 14px;
-    align-items: center;
-  }
-
-  /* Heavy Industrial Generator Chassis */
+  /* Industrial Generator Chassis (GPU-accelerated) */
   .gen {
     background: linear-gradient(145deg, #161b28 0%, #090c12 100%);
     border-radius: 24px;
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 
-      0 20px 40px rgba(0, 0, 0, 0.65),
-      inset 0 2px 3px rgba(255, 255, 255, 0.15),
-      inset 0 -4px 10px rgba(0, 0, 0, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.15);
     padding: 16px;
     position: relative;
-    transition: transform 0.1s ease, box-shadow 0.3s ease;
+    will-change: transform;
   }
 
   .gen.shake {
-    animation: chassisShake 0.28s cubic-bezier(.36,.07,.19,.97) both;
-  }
-
-  .gen.surge {
-    box-shadow: 
-      0 0 40px var(--on-glow),
-      0 20px 40px rgba(0, 0, 0, 0.65),
-      inset 0 0 20px var(--on-glow);
+    animation: chassisShake 0.24s ease-in-out;
   }
 
   @keyframes chassisShake {
-    10%, 90% { transform: translate3d(-2px, 0, 0); }
-    20%, 80% { transform: translate3d(3px, 0, 0); }
-    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-    40%, 60% { transform: translate3d(4px, 0, 0); }
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-3px); }
   }
 
-  /* Decorative corner bolts */
   .bolt {
     position: absolute;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #68738c, #1c2230);
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.3), 0 1px 2px #000;
+    box-shadow: 0 1px 2px #000;
   }
   .bolt.tl { top: 8px; left: 8px; }
   .bolt.tr { top: 8px; right: 8px; }
   .bolt.bl { bottom: 8px; left: 8px; }
   .bolt.br { bottom: 8px; right: 8px; }
 
-  /* Progress Power Bar inside Generator */
   .power-bar-wrap {
     height: 6px;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.65);
     border-radius: 99px;
     margin-bottom: 12px;
     overflow: hidden;
@@ -311,10 +249,12 @@
 
   .power-bar {
     height: 100%;
-    width: 0%;
+    width: 100%;
+    transform-origin: left center;
+    transform: scaleX(0);
     background: linear-gradient(90deg, var(--off), var(--on));
-    box-shadow: 0 0 10px var(--on-glow);
-    transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
   }
 
   .bd {
@@ -325,57 +265,38 @@
     padding: 12px;
     border: 2px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
-    box-shadow: inset 0 6px 16px rgba(0, 0, 0, 0.85);
+    box-shadow: inset 0 6px 14px rgba(0, 0, 0, 0.85);
   }
 
-  /* Tactile Illuminated Switch Tiles */
+  /* Base Switch Tile */
   .t {
     aspect-ratio: 1 / 1.05;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 12px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, 0.25) 100%), var(--off);
-    box-shadow: 0 4px 12px var(--off-glow), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    background: linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 48%, rgba(0,0,0,0.22) 100%), var(--off);
+    box-shadow: 0 4px 10px var(--off-glow), inset 0 1px 1px rgba(255, 255, 255, 0.45);
     cursor: pointer;
     padding: 0;
     position: relative;
-    font-size: clamp(1.4rem, 6.5vw, 2.2rem);
-    line-height: 1;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.08s ease;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    transition: transform 0.08s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+    will-change: transform;
   }
 
   .t.on {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, 0.15) 100%), var(--on);
-    box-shadow: 0 0 18px var(--on-glow), inset 0 1px 2px rgba(255, 255, 255, 0.7);
+    background: linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 48%, rgba(0,0,0,0.14) 100%), var(--on);
+    box-shadow: 0 0 14px var(--on-glow), inset 0 1px 2px rgba(255, 255, 255, 0.7);
     border-color: rgba(255, 255, 255, 0.55);
   }
 
-  .t:active:not(.lock *) {
-    transform: scale(0.92);
-  }
-
-  .t.flip-anim {
-    animation: tilePop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-
-  @keyframes tilePop {
-    0% { transform: scale(1); }
-    45% { transform: scale(0.91); }
-    100% { transform: scale(1); }
-  }
+  .t:active:not(.lock *) { transform: scale(0.92); }
 
   .t.mk {
-    box-shadow: 0 0 0 3px #fff, 0 0 22px #fff, 0 0 30px var(--accent);
+    box-shadow: 0 0 0 3px #fff, 0 0 18px #fff;
     z-index: 2;
-    animation: hintPulse 1s infinite alternate;
-  }
-
-  @keyframes hintPulse {
-    from { transform: scale(0.97); }
-    to { transform: scale(1.03); }
   }
 
   .key-badge {
@@ -384,14 +305,188 @@
     left: 7px;
     font-size: 0.65rem;
     font-weight: 800;
-    color: rgba(255, 255, 255, 0.65);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
     pointer-events: none;
+    z-index: 3;
   }
 
-  .lock .t {
-    cursor: default;
+  .art {
+    width: 66%;
+    height: 66%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 2;
   }
+
+  .art svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+  }
+
+  /* =========================================================
+     UNIQUE SKIN ARCHITECTURES (Chassis + Texture + Geometry)
+     ========================================================= */
+
+  /* 1. Classic: Industrial Toggle Breaker */
+  [data-skin="classic"] .t::after {
+    content: '';
+    width: 34%;
+    height: 54%;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+    transition: transform 0.14s ease, background 0.14s ease;
+  }
+  [data-skin="classic"] .t.on::after {
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 8px #fff;
+  }
+
+  /* 2. Halloween: Haunted Gothic Iron & Jack-O'-Lantern */
+  [data-skin="hallo"] .gen {
+    background: linear-gradient(145deg, #241038 0%, #0d0514 100%);
+    border-color: #ff7a00;
+    box-shadow: 0 18px 36px rgba(0,0,0,0.8), 0 0 20px rgba(255, 122, 0, 0.25);
+  }
+  [data-skin="hallo"] .t {
+    border-radius: 16px 16px 6px 6px;
+    border: 2px solid #7e3ff2;
+    background-image: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.18), transparent 70%), linear-gradient(180deg, #561d8c, #2b0b4a);
+  }
+  [data-skin="hallo"] .t.on {
+    border-color: #ffd000;
+    background-image: radial-gradient(circle at 50% 45%, #ffbe0b 0%, #fb5607 65%, #9b2226 100%);
+  }
+
+  /* 3. Grim Harvest: Cracked Tombstone & Necro-Slime */
+  [data-skin="reaper"] .gen {
+    background: linear-gradient(145deg, #161c18 0%, #070a08 100%);
+    border-color: #39ff14;
+    border-radius: 12px;
+  }
+  [data-skin="reaper"] .t {
+    border-radius: 40% 40% 6px 6px;
+    border: 2px solid #49544d;
+    background: linear-gradient(180deg, #333b36 0%, #191f1c 100%);
+  }
+  [data-skin="reaper"] .t.on {
+    border-color: #9ef01a;
+    background: radial-gradient(circle at 50% 50%, #ccff33 0%, #38b000 60%, #004b23 100%);
+  }
+
+  /* 4. Candy Pop: Glossy Bubblegum Pillows */
+  [data-skin="candy"] .gen {
+    background: linear-gradient(145deg, #4d194d 0%, #210726 100%);
+    border-color: #ff85a1;
+    border-radius: 30px;
+  }
+  [data-skin="candy"] .t {
+    border-radius: 22px;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 45%), linear-gradient(180deg, #ff70a6 0%, #ff0a54 100%);
+  }
+  [data-skin="candy"] .t.on {
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 45%), linear-gradient(180deg, #72efdd 0%, #00bbf9 100%);
+  }
+
+  /* 5. Midnight: Celestial Astral Dial */
+  [data-skin="night"] .gen {
+    background: linear-gradient(145deg, #131138 0%, #060517 100%);
+    border-color: #ffd166;
+  }
+  [data-skin="night"] .t {
+    border-radius: 50%;
+    border: 2px solid #483d8b;
+    background: radial-gradient(circle at 35% 35%, #2b2466, #100c30);
+  }
+  [data-skin="night"] .t.on {
+    border-color: #fff3b0;
+    background: radial-gradient(circle at 50% 50%, #ffffff 0%, #ffd166 45%, #f77f00 100%);
+  }
+
+  /* 6. Deep Aero: Frutiger Liquid Glass Pods */
+  [data-skin="ocean"] .gen {
+    background: linear-gradient(160deg, #0b3954 0%, #031926 100%);
+    border-color: #48cae4;
+    border-radius: 26px;
+  }
+  [data-skin="ocean"] .t {
+    border-radius: 16px;
+    border: 1px solid rgba(144, 224, 239, 0.45);
+    background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.05) 48%, rgba(0,119,182,0.5) 100%), #023e8a;
+  }
+  [data-skin="ocean"] .t.on {
+    border-color: #caf0f8;
+    background: linear-gradient(180deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.1) 48%, rgba(0,180,216,0.4) 100%), #00f5d4;
+  }
+
+  /* 7. Cyberpunk: Chamfered Tech Circuit Pads */
+  [data-skin="cyber"] .gen {
+    background: #090014;
+    border-color: #ff007f;
+    border-radius: 8px;
+  }
+  [data-skin="cyber"] .t {
+    border-radius: 4px;
+    clip-path: polygon(12% 0, 100% 0, 100% 88%, 88% 100%, 0 100%, 0 12%);
+    border: none;
+    background: linear-gradient(135deg, #ff007f 0%, #590d22 100%);
+  }
+  [data-skin="cyber"] .t.on {
+    background: linear-gradient(135deg, #00f5d4 0%, #0077b6 100%);
+  }
+
+  /* 8. Core Meltdown: Cracked Obsidian & Magma */
+  [data-skin="lava"] .gen {
+    background: linear-gradient(145deg, #2b0902 0%, #0d0200 100%);
+    border-color: #ff5400;
+  }
+  [data-skin="lava"] .t {
+    border-radius: 10px;
+    border: 2px solid #591607;
+    background: repeating-linear-gradient(45deg, #240702, #240702 8px, #380b03 8px, #380b03 16px);
+  }
+  [data-skin="lava"] .t.on {
+    border-color: #ffbd00;
+    background: radial-gradient(circle at 50% 50%, #fff3b0 0%, #ff9e00 40%, #ff0000 100%);
+  }
+
+  /* 9. Sakura: Shoji Lanterns & Blossoms */
+  [data-skin="sakura"] .gen {
+    background: linear-gradient(145deg, #3b1528 0%, #17060f 100%);
+    border-color: #ff8fab;
+  }
+  [data-skin="sakura"] .t {
+    border-radius: 14px;
+    border: 2px solid #9e4770;
+    background: linear-gradient(180deg, #59213c 0%, #361023 100%);
+  }
+  [data-skin="sakura"] .t.on {
+    border-color: #ffe5ec;
+    background: radial-gradient(circle at 50% 50%, #ffffff 0%, #ffb3c6 55%, #ff758f 100%);
+  }
+
+  /* 10. Overclock Gold: Diamond-Plate Vault Bars */
+  [data-skin="gold"] .gen {
+    background: linear-gradient(145deg, #332600 0%, #120d00 100%);
+    border-color: #ffd000;
+  }
+  [data-skin="gold"] .t {
+    border-radius: 8px;
+    border: 2px solid #7f5f00;
+    background: repeating-linear-gradient(-45deg, #3d2e00, #3d2e00 6px, #4f3c00 6px, #4f3c00 12px);
+  }
+  [data-skin="gold"] .t.on {
+    border-color: #fff;
+    background: linear-gradient(135deg, #fff3b0 0%, #ffd000 45%, #e09f3e 100%);
+  }
+
+  .lock .t { cursor: default; }
 
   .info {
     display: flex;
@@ -408,7 +503,6 @@
     color: var(--danger);
     font-weight: 800;
     font-size: 1.05rem;
-    text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
   }
 
   .res {
@@ -418,13 +512,11 @@
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid transparent;
-    transition: all 0.2s ease;
   }
 
   .res.active {
     background: rgba(0, 255, 136, 0.08);
     border-color: rgba(0, 255, 136, 0.3);
-    box-shadow: 0 4px 20px rgba(0, 255, 136, 0.12);
   }
 
   .win {
@@ -440,24 +532,23 @@
     line-height: 1.5;
   }
 
-  /* Toast Notification */
+  /* Toast */
   .toast {
     position: fixed;
     left: 50%;
     bottom: calc(24px + env(safe-area-inset-bottom, 0px));
     transform: translate(-50%, 16px);
-    background: rgba(15, 22, 38, 0.92);
-    backdrop-filter: blur(12px);
+    background: #101726;
     color: #fff;
     border: 1px solid var(--accent);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--accent-glow);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
     padding: 10px 18px;
     border-radius: 12px;
     font-weight: 700;
     font-size: 0.9rem;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition: opacity 0.18s ease, transform 0.18s ease;
     max-width: 90vw;
     text-align: center;
     z-index: 40;
@@ -472,8 +563,7 @@
   .ov {
     position: fixed;
     inset: 0;
-    background: rgba(4, 6, 12, 0.75);
-    backdrop-filter: blur(6px);
+    background: rgba(4, 6, 12, 0.78);
     display: none;
     align-items: flex-start;
     justify-content: center;
@@ -482,22 +572,14 @@
     overflow: auto;
   }
 
-  .ov.open {
-    display: flex;
-    animation: fadeIn 0.18s ease;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
+  .ov.open { display: flex; }
 
   .panel {
     background: #111726;
     border-radius: 20px;
     padding: 20px;
     width: 100%;
-    max-width: 500px;
+    max-width: 520px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.75);
   }
@@ -511,11 +593,7 @@
     border-bottom: 1px solid var(--panel-border);
   }
 
-  .ph h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 800;
-  }
+  .ph h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
 
   .grid {
     display: grid;
@@ -530,23 +608,17 @@
     padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 9px;
-    transition: transform 0.12s ease, border-color 0.15s ease;
-  }
-
-  .sk:hover {
-    border-color: rgba(255, 255, 255, 0.25);
+    gap: 8px;
   }
 
   .sk.eq {
     border: 2px solid var(--accent);
-    background: rgba(0, 229, 255, 0.06);
-    box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
+    background: rgba(0, 229, 255, 0.07);
   }
 
   .sk.spooky {
-    border-color: rgba(255, 119, 0, 0.45);
-    background: linear-gradient(145deg, rgba(75, 29, 122, 0.2), rgba(255, 119, 0, 0.08));
+    border-color: rgba(255, 119, 0, 0.5);
+    background: linear-gradient(145deg, rgba(75, 29, 122, 0.25), rgba(255, 119, 0, 0.1));
   }
 
   .pv {
@@ -560,18 +632,16 @@
 
   .pv span {
     flex: 1;
-    height: 34px;
+    height: 38px;
     border-radius: 6px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%), var(--off);
+    background: var(--off);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
   }
 
-  .pv span + span {
-    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%), var(--on);
-  }
+  .pv span + span { background: var(--on); }
+  .pv svg { width: 22px; height: 22px; }
 
   .nm {
     font-weight: 800;
@@ -581,21 +651,24 @@
     justify-content: space-between;
   }
 
+  .desc {
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.25;
+  }
+
   .tag {
     font-size: 0.76rem;
     color: var(--muted);
-    font-weight: 600;
+    font-weight: 700;
   }
 
-  .lim {
-    color: #ff8c1a;
-    font-weight: 800;
-  }
+  .lim { color: #ff8c1a; font-weight: 800; }
 
   .sec {
     margin: 18px 0 8px;
     font-weight: 800;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--muted);
@@ -611,17 +684,10 @@
     font-size: 0.92rem;
   }
 
-  .ach.done {
-    color: var(--muted);
-  }
+  .ach.done { color: var(--muted); }
+  .ach.done span:first-child::before { content: "✓ "; color: var(--ok); font-weight: 900; }
 
-  .ach.done span:first-child::before {
-    content: "✓ ";
-    color: var(--ok);
-    font-weight: 900;
-  }
-
-  /* Particle Overlay Canvas */
+  /* On-demand FX Canvas (only renders when particles exist!) */
   #fx {
     position: fixed;
     inset: 0;
@@ -630,28 +696,13 @@
   }
 
   @media (max-width: 660px) {
-    .wrap {
-      grid-template-columns: 1fr;
-    }
-    .side {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 16px;
-    }
-    .big {
-      grid-column: 1 / -1;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
+    .wrap { grid-template-columns: 1fr; }
+    .side { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+    .big { grid-column: 1 / -1; }
   }
 </style>
 </head>
-<body>
+<body data-skin="classic">
 <canvas id="fx"></canvas>
 <main>
   <div class="top glass">
@@ -670,7 +721,7 @@
       <div class="big">
         <div class="lbl">Win Streak</div>
         <div class="num" id="sStreak">🔥 0</div>
-        <div class="lbl" id="sMult" style="color:var(--accent);margin-top:2px">×1.0 Bonus</div>
+        <div class="lbl" id="sMult" style="color:var(--accent);margin-top:2px">×1.0 Multiplier</div>
       </div>
       <div class="kv"><span>🪙 Coins</span><b id="sCoins" style="color:#ffd21f">0</b></div>
       <div class="kv"><span>Best Streak</span><b id="sBest">0</b></div>
@@ -749,20 +800,41 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// Extended Event Window so Halloween skins are active and purchasable
 const EVENT_END = new Date(2026, 11, 31, 23, 59, 59);
 
+// Custom Crisp Vector SVG Artwork for Truly Distinct Skins
+const SVG = {
+  web: `<svg viewBox="0 0 24 24" fill="none" stroke="#d8b4fe" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9L4.9 19.1"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8.5" stroke-dasharray="3 2"/></svg>`,
+  pumpkin: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 3c1-1.5 2.5-1.5 3 0" stroke="#2b9348" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="12" cy="13" rx="8.5" ry="7" fill="#ff6d00" stroke="#4a1500" stroke-width="1.5"/><ellipse cx="12" cy="13" rx="4.5" ry="7" fill="#ff8500" stroke="#4a1500" stroke-width="1.2"/><polygon points="8.5,10.5 10,8.5 11.2,10.5" fill="#fff3b0"/><polygon points="15.5,10.5 14,8.5 12.8,10.5" fill="#fff3b0"/><path d="M8 14.5l1.5 1.5 1.2-1.2 1.3 1.2 1.3-1.2 1.2 1.2 1.5-1.5" stroke="#fff3b0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  tomb: `<svg viewBox="0 0 24 24" fill="none"><path d="M6 20V10a6 6 0 0 1 12 0v10H6z" fill="#6c757d" stroke="#212529" stroke-width="1.8"/><path d="M12 7v6M9.5 9.5h5" stroke="#adb5bd" stroke-width="1.8" stroke-linecap="round"/><path d="M4 20h16" stroke="#39ff14" stroke-width="2" stroke-linecap="round"/></svg>`,
+  skull: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 3a7.5 7.5 0 0 0-7.5 7.5c0 2.7 1.4 5 3.5 6.3V20h8v-3.2c2.1-1.3 3.5-3.6 3.5-6.3A7.5 7.5 0 0 0 12 3z" fill="#f8f9fa" stroke="#081c15" stroke-width="1.6"/><circle cx="9.2" cy="11" r="1.8" fill="#081c15"/><circle cx="14.8" cy="11" r="1.8" fill="#081c15"/><path d="M12 13.5l-1 1.8h2l-1-1.8zM10 17.5v2.5M12 17.5v2.5M14 17.5v2.5" stroke="#081c15" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  swirlOff: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 12c0-1.5 1.5-2.5 3-2.5 2.5 0 4 2 4 4.5 0 3.5-3 6-6.5 6-4.5 0-8-3.5-8-8 0-5.5 4.5-9.5 10-9.5"/></svg>`,
+  starCandy: `<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l2.7 5.8 6.3.8-4.6 4.4 1.2 6.2L12 16.7l-5.6 3 1.2-6.2L3 9.1l6.3-.8L12 2.5z"/></svg>`,
+  crescent: `<svg viewBox="0 0 24 24" fill="#a5b4fc"><path d="M15.5 3.5a8.5 8.5 0 1 0 5 14.5A7 7 0 0 1 15.5 3.5z"/></svg>`,
+  sunburst: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5" fill="#fff"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>`,
+  sonarOff: `<svg viewBox="0 0 24 24" fill="none" stroke="#90e0ef" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5" stroke-dasharray="4 3"/></svg>`,
+  waveOn: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M3 10c2.5-3 5-3 7.5 0s5 3 7.5 0 3-1.5 3-1.5M3 15c2.5-3 5-3 7.5 0s5 3 7.5 0 3-1.5 3-1.5"/></svg>`,
+  chipOff: `<svg viewBox="0 0 24 24" fill="none" stroke="#ff8fa3" stroke-width="1.8"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>`,
+  cyberBolt: `<svg viewBox="0 0 24 24" fill="#fff"><polygon points="13,2 4,14 11,14 10,22 20,10 13,10"/></svg>`,
+  crackOff: `<svg viewBox="0 0 24 24" fill="none" stroke="#ff758f" stroke-width="2" stroke-linecap="round"><path d="M7 4l4 5-3 4 5 7M16 6l-3 4 4 3"/></svg>`,
+  flameOn: `<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2c2.5 4 6 6.5 6 11a6 6 0 0 1-12 0c0-2.5 1.5-4.5 3-6-.2 2 1 3 2 3 0-3 1-5.5 1-8z"/></svg>`,
+  petalOff: `<svg viewBox="0 0 24 24" fill="none" stroke="#ffb3c6" stroke-width="1.8"><path d="M12 4c4 4 4 12 0 16-4-4-4-12 0-16z"/><path d="M4 12c4-4 12-4 16 0-4 4-12 4-16 0z"/></svg>`,
+  blossomOn: `<svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="7" r="3"/><circle cx="16.8" cy="10.5" r="3"/><circle cx="15" cy="16.2" r="3"/><circle cx="9" cy="16.2" r="3"/><circle cx="7.2" cy="10.5" r="3"/><circle cx="12" cy="12" r="2.2" fill="#ff4d6d"/></svg>`,
+  lockOff: `<svg viewBox="0 0 24 24" fill="none" stroke="#ffd000" stroke-width="1.9"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+  crownOn: `<svg viewBox="0 0 24 24" fill="#fff"><path d="M3 18h18l-1.5-10-4.5 4-3-6-3 6-4.5-4L3 18z"/></svg>`
+};
+
 const SKINS = [
-  { id: 'classic', name: 'Classic', price: 0, off: '#d91e36', on: '#00e676', bez: '#0b0e17', offGlow: 'rgba(217,30,54,0.35)', onGlow: 'rgba(0,230,118,0.5)' },
-  { id: 'hallo', name: 'Halloween', price: 120, off: '#4b1d7a', on: '#ff7a00', bez: '#120018', offG: '🕸️', onG: '🎃', limited: true, offGlow: 'rgba(75,29,122,0.45)', onGlow: 'rgba(255,122,0,0.6)' },
-  { id: 'reaper', name: 'Grim Harvest', price: 175, off: '#1f2421', on: '#39ff14', bez: '#080a09', offG: '🪦', onG: '💀', limited: true, offGlow: 'rgba(31,36,33,0.5)', onGlow: 'rgba(57,255,20,0.6)' },
-  { id: 'candy', name: 'Candy Pop', price: 60, off: '#ff4791', on: '#5ce1e6', bez: '#2b0b1e', offGlow: 'rgba(255,71,145,0.4)', onGlow: 'rgba(92,225,230,0.55)' },
-  { id: 'night', name: 'Midnight', price: 90, off: '#2a1a66', on: '#ffe45c', bez: '#0a0620', offGlow: 'rgba(42,26,102,0.4)', onGlow: 'rgba(255,228,92,0.5)' },
-  { id: 'ocean', name: 'Deep Aero', price: 100, off: '#103783', on: '#00f5d4', bez: '#041229', offGlow: 'rgba(16,55,131,0.45)', onGlow: 'rgba(0,245,212,0.55)' },
-  { id: 'cyber', name: 'Cyberpunk', price: 150, off: '#d9048e', on: '#00f0ff', bez: '#0a0016', offGlow: 'rgba(217,4,142,0.45)', onGlow: 'rgba(0,240,255,0.6)' },
-  { id: 'lava', name: 'Core Meltdown', price: 180, off: '#4a0d00', on: '#ff5e00', bez: '#140300', offG: '🪨', onG: '🔥', offGlow: 'rgba(74,13,0,0.5)', onGlow: 'rgba(255,94,0,0.6)' },
-  { id: 'sakura', name: 'Sakura', price: 200, off: '#7a2f55', on: '#ffc7e3', bez: '#240a18', offG: '🍃', onG: '🌸', offGlow: 'rgba(122,47,85,0.4)', onGlow: 'rgba(255,199,227,0.5)' },
-  { id: 'gold', name: 'Overclock Gold', price: 250, off: '#5a4300', on: '#ffd21f', bez: '#1a1200', offG: '⚙️', onG: '⚡', offGlow: 'rgba(90,67,0,0.45)', onGlow: 'rgba(255,210,31,0.65)' }
+  { id: 'classic', name: 'Classic Breaker', desc: 'Industrial mechanical toggle switches', price: 0, off: '#d91e36', on: '#00e676', bez: '#0b0e17', offGlow: 'rgba(217,30,54,0.35)', onGlow: 'rgba(0,230,118,0.45)', offSvg: '', onSvg: '' },
+  { id: 'hallo', name: 'Halloween', desc: 'Arched gothic tiles & glowing Jack-O’-Lanterns', price: 120, off: '#4b1d7a', on: '#ff7a00', bez: '#120018', limited: true, offGlow: 'rgba(126,63,242,0.4)', onGlow: 'rgba(255,133,0,0.6)', offSvg: SVG.web, onSvg: SVG.pumpkin },
+  { id: 'reaper', name: 'Grim Harvest', desc: 'Stone tombstones & radioactive necro-skulls', price: 175, off: '#242b27', on: '#39ff14', bez: '#080a09', limited: true, offGlow: 'rgba(57,255,20,0.2)', onGlow: 'rgba(57,255,20,0.65)', offSvg: SVG.tomb, onSvg: SVG.skull },
+  { id: 'candy', name: 'Candy Pop', desc: 'Rounded bubblegum pillows & sugar stars', price: 60, off: '#ff0a54', on: '#00bbf9', bez: '#240728', offGlow: 'rgba(255,10,84,0.4)', onGlow: 'rgba(0,187,249,0.55)', offSvg: SVG.swirlOff, onSvg: SVG.starCandy },
+  { id: 'night', name: 'Astral Dial', desc: 'Circular eclipse rings & solar flares', price: 90, off: '#1e194d', on: '#ffb703', bez: '#07051c', offGlow: 'rgba(165,180,252,0.25)', onGlow: 'rgba(255,183,3,0.6)', offSvg: SVG.crescent, onSvg: SVG.sunburst },
+  { id: 'ocean', name: 'Frutiger Aero', desc: 'Glossy aqua glass pods & hydro waves', price: 100, off: '#023e8a', on: '#00f5d4', bez: '#021526', offGlow: 'rgba(0,119,182,0.4)', onGlow: 'rgba(0,245,212,0.55)', offSvg: SVG.sonarOff, onSvg: SVG.waveOn },
+  { id: 'cyber', name: 'Cyberpunk', desc: 'Chamfered circuit pads & high-voltage bolts', price: 150, off: '#b5179e', on: '#00f5d4', bez: '#090014', offGlow: 'rgba(255,0,127,0.45)', onGlow: 'rgba(0,245,212,0.6)', offSvg: SVG.chipOff, onSvg: SVG.cyberBolt },
+  { id: 'lava', name: 'Core Meltdown', desc: 'Fractured obsidian vents & plasma flames', price: 180, off: '#380b03', on: '#ff5400', bez: '#120200', offGlow: 'rgba(255,84,0,0.25)', onGlow: 'rgba(255,158,0,0.65)', offSvg: SVG.crackOff, onSvg: SVG.flameOn },
+  { id: 'sakura', name: 'Sakura Shrine', desc: 'Shoji lantern frames & blooming blossoms', price: 200, off: '#59213c', on: '#ff8fab', bez: '#1f0813', offGlow: 'rgba(255,143,171,0.25)', onGlow: 'rgba(255,179,198,0.6)', offSvg: SVG.petalOff, onSvg: SVG.blossomOn },
+  { id: 'gold', name: 'Vault Bullion', desc: 'Diamond-plate security locks & gold crowns', price: 250, off: '#4f3c00', on: '#ffd000', bez: '#140f00', offGlow: 'rgba(255,208,0,0.25)', onGlow: 'rgba(255,208,0,0.65)', offSvg: SVG.lockOff, onSvg: SVG.crownOn }
 ];
 
 const DIFF = {
@@ -815,7 +887,6 @@ const save = () => {
 
 const $ = id => document.getElementById(id);
 
-// Core Grid Logic (2x4 toggle cross)
 const getNeighbors = i => {
   const r = i >> 2, c = i & 3, res = [];
   [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dr, dc]) => {
@@ -847,7 +918,7 @@ const skinOf = id => SKINS.find(s => s.id === id) || SKINS[0];
 const eventOn = () => Date.now() < EVENT_END;
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 
-// Synthesized Sound Engine (Web Audio API)
+// Synthesized Web Audio
 let ac = null;
 function playTone(freq, dur = 0.08, delay = 0, type = 'triangle', vol = 0.08) {
   if (!S.sound) return;
@@ -859,7 +930,7 @@ function playTone(freq, dur = 0.08, delay = 0, type = 'triangle', vol = 0.08) {
     o.type = type;
     o.frequency.setValueAtTime(freq, ac.currentTime + delay);
     g.gain.setValueAtTime(0.001, ac.currentTime + delay);
-    g.gain.exponentialRampToValueAtTime(vol, ac.currentTime + delay + 0.015);
+    g.gain.exponentialRampToValueAtTime(vol, ac.currentTime + delay + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + delay + dur);
     o.connect(g);
     g.connect(ac.destination);
@@ -870,23 +941,24 @@ function playTone(freq, dur = 0.08, delay = 0, type = 'triangle', vol = 0.08) {
 
 function sfxClick(idx, isOn) {
   const base = isOn ? 440 : 320;
-  playTone(base + idx * 35, 0.07, 0, 'triangle', 0.09);
-  playTone((base + idx * 35) * 1.5, 0.05, 0.01, 'sine', 0.04);
+  playTone(base + idx * 35, 0.07, 0, 'triangle', 0.08);
 }
 
 function sfxWin(perfect) {
   const notes = perfect ? [523.25, 659.25, 783.99, 1046.5] : [440, 554.37, 659.25];
-  notes.forEach((n, idx) => playTone(n, 0.16, idx * 0.065, 'triangle', 0.09));
+  notes.forEach((n, idx) => playTone(n, 0.14, idx * 0.06, 'triangle', 0.08));
 }
 
 function sfxError() {
-  playTone(150, 0.14, 0, 'sawtooth', 0.07);
+  playTone(150, 0.12, 0, 'sawtooth', 0.06);
 }
 
-// Particle Confetti System
+// On-Demand Particle Engine (Zero CPU/GPU usage when idle!)
 const fxCanvas = $('fx');
 const ctx = fxCanvas.getContext('2d');
 let particles = [];
+let fxRunning = false;
+
 function resizeFx() {
   fxCanvas.width = window.innerWidth;
   fxCanvas.height = window.innerHeight;
@@ -894,19 +966,23 @@ function resizeFx() {
 window.addEventListener('resize', resizeFx);
 resizeFx();
 
-function spawnBurst(x, y, color, count = 24) {
+function spawnBurst(x, y, color, count = 20) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 2 + Math.random() * 6;
+    const speed = 2 + Math.random() * 5.5;
     particles.push({
       x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed - 2,
-      size: 3 + Math.random() * 4,
+      size: 3 + Math.random() * 3.5,
       color,
       alpha: 1,
-      decay: 0.02 + Math.random() * 0.02
+      decay: 0.025 + Math.random() * 0.02
     });
+  }
+  if (!fxRunning) {
+    fxRunning = true;
+    requestAnimationFrame(loopFx);
   }
 }
 
@@ -916,7 +992,7 @@ function loopFx() {
     const p = particles[i];
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += 0.18; // gravity
+    p.vy += 0.2;
     p.alpha -= p.decay;
     if (p.alpha <= 0) {
       particles.splice(i, 1);
@@ -924,14 +1000,15 @@ function loopFx() {
     }
     ctx.globalAlpha = p.alpha;
     ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, p.size, p.size);
   }
   ctx.globalAlpha = 1;
-  requestAnimationFrame(loopFx);
+  if (particles.length > 0) {
+    requestAnimationFrame(loopFx);
+  } else {
+    fxRunning = false;
+  }
 }
-loopFx();
 
 // Toast
 let tt;
@@ -940,7 +1017,7 @@ function toast(m) {
   t.textContent = m;
   t.classList.add('show');
   clearTimeout(tt);
-  tt = setTimeout(() => t.classList.remove('show'), 2800);
+  tt = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
 // Game State
@@ -952,20 +1029,23 @@ for (let i = 0; i < 8; i++) {
   const t = document.createElement('button');
   t.className = 't';
   t.setAttribute('aria-label', 'Switch ' + (i + 1));
-  t.innerHTML = `<span class="key-badge">${i + 1}</span><span class="glyph"></span>`;
+  t.innerHTML = `<span class="key-badge">${i + 1}</span><span class="art"></span>`;
   t.onclick = () => press(i);
   $('bd').appendChild(t);
   tiles.push(t);
 }
 
+let cachedSkinId = '';
 function applySkin() {
   const s = skinOf(S.skin);
+  document.body.setAttribute('data-skin', s.id);
   const root = document.documentElement.style;
   root.setProperty('--off', s.off);
   root.setProperty('--on', s.on);
   root.setProperty('--bez', s.bez);
   root.setProperty('--off-glow', s.offGlow || 'rgba(217,30,54,0.35)');
-  root.setProperty('--on-glow', s.onGlow || 'rgba(0,230,118,0.5)');
+  root.setProperty('--on-glow', s.onGlow || 'rgba(0,230,118,0.45)');
+  cachedSkinId = ''; // Force SVG art refresh
   draw();
 }
 
@@ -988,13 +1068,19 @@ function draw() {
   tiles.forEach((t, i) => {
     const on = !board[i];
     if (on) litCount++;
+    const wasOn = t.classList.contains('on');
     t.classList.toggle('on', on);
     t.classList.toggle('mk', mark === i);
-    t.querySelector('.glyph').textContent = on ? (s.onG || '') : (s.offG || '');
-  });
 
-  // Update Power Bar
-  $('pBar').style.width = ((litCount / 8) * 100) + '%';
+    // Only update innerHTML when state or skin actually changes (prevents layout thrash)
+    if (wasOn !== on || cachedSkinId !== s.id) {
+      t.querySelector('.art').innerHTML = on ? (s.onSvg || '') : (s.offSvg || '');
+    }
+  });
+  cachedSkinId = s.id;
+
+  // GPU-composited scaleX bar
+  $('pBar').style.transform = `scaleX(${litCount / 8})`;
 
   if (blitz.on) {
     const rem = Math.max(0, Math.ceil((blitz.end - Date.now()) / 1000));
@@ -1037,7 +1123,6 @@ function newPuzzle() {
   hinted = false;
   over = false;
   mark = -1;
-  $('gen').classList.remove('surge');
   const resEl = $('res');
   resEl.innerHTML = '';
   resEl.classList.remove('active');
@@ -1047,15 +1132,7 @@ function newPuzzle() {
 function press(i) {
   if (over) return;
   mark = -1;
-  const affected = getNeighbors(i);
-  affected.forEach(idx => {
-    board[idx] ^= 1;
-    const el = tiles[idx];
-    el.classList.remove('flip-anim');
-    void el.offsetWidth; // trigger reflow
-    el.classList.add('flip-anim');
-  });
-
+  flip(board, i);
   hist.push(i);
   sfxClick(i, !board[i]);
 
@@ -1063,14 +1140,13 @@ function press(i) {
   draw();
 }
 
-// Goals & Daily Progress
 function checkAch() {
   ACH.forEach(a => {
     if (!S.ach[a.id] && a.f()) {
       S.ach[a.id] = 1;
       S.coins += a.r;
       setTimeout(() => toast('🏆 ' + a.t + ': +' + a.r + ' 🪙'), 600);
-      playTone(880, 0.15, 0, 'sine', 0.1);
+      playTone(880, 0.14, 0, 'sine', 0.09);
     }
   });
 }
@@ -1080,7 +1156,7 @@ function bumpDay() {
   if (!S.dayDone && S.dayCount >= GOAL_N) {
     S.dayDone = true;
     S.coins += 30;
-    setTimeout(() => toast('🗓️ Daily goal complete: +30 🪙'), 1300);
+    setTimeout(() => toast('🗓️ Daily goal complete: +30 🪙'), 1200);
   }
 }
 
@@ -1091,16 +1167,15 @@ function win() {
 
   const genRect = $('gen').getBoundingClientRect();
   const skin = skinOf(S.skin);
-  $('gen').classList.add('surge');
 
   if (blitz.on) {
     blitz.score++;
     checkAch();
     save();
     draw();
-    playTone(660, 0.08, 0, 'triangle', 0.09);
-    spawnBurst(genRect.left + genRect.width / 2, genRect.top + genRect.height / 2, skin.on, 16);
-    setTimeout(() => { if (blitz.on) newPuzzle(); }, 220);
+    playTone(660, 0.08, 0, 'triangle', 0.08);
+    spawnBurst(genRect.left + genRect.width / 2, genRect.top + genRect.height / 2, skin.on, 14);
+    setTimeout(() => { if (blitz.on) newPuzzle(); }, 200);
     return;
   }
 
@@ -1124,7 +1199,7 @@ function win() {
   save();
   draw();
   sfxWin(perfect);
-  spawnBurst(genRect.left + genRect.width / 2, genRect.top + genRect.height / 2, skin.on, perfect ? 42 : 24);
+  spawnBurst(genRect.left + genRect.width / 2, genRect.top + genRect.height / 2, skin.on, perfect ? 32 : 18);
 
   const resEl = $('res');
   resEl.classList.add('active');
@@ -1143,7 +1218,7 @@ function win() {
 
 // Blitz Mode
 function startBlitz() {
-  blitz = { on: true, end: Date.now() + 60000, score: 0, tm: setInterval(tick, 200) };
+  blitz = { on: true, end: Date.now() + 60000, score: 0, tm: setInterval(tick, 250) };
   newPuzzle();
 }
 
@@ -1182,7 +1257,6 @@ function endBlitz() {
 
 $('blitz').onclick = () => { if (blitz.on) endBlitz(); else startBlitz(); };
 
-// Controls
 function undo() {
   if (over || !hist.length) return;
   flip(board, hist.pop());
@@ -1258,12 +1332,13 @@ function renderShop() {
     d.className = 'sk' + (eq ? ' eq' : '') + (s.limited ? ' spooky' : '');
     d.innerHTML = `
       <div class="pv" style="--bez:${s.bez};--off:${s.off};--on:${s.on}">
-        <span>${s.offG || ''}</span>
-        <span>${s.onG || ''}</span>
+        <span>${s.offSvg || ''}</span>
+        <span>${s.onSvg || ''}</span>
       </div>
       <div>
         <div class="nm">${s.name} ${s.limited ? '🎃' : ''}</div>
-        <div class="tag">${s.limited ? '<span class="lim">Limited: ' + left() + '</span>' : own ? 'Unlocked' : s.price + ' 🪙'}</div>
+        <div class="desc">${s.desc}</div>
+        <div class="tag" style="margin-top:4px">${s.limited ? '<span class="lim">Limited: ' + left() + '</span>' : own ? 'Unlocked' : s.price + ' 🪙'}</div>
       </div>
     `;
     const b = document.createElement('button');
@@ -1355,7 +1430,6 @@ $('wipe').onclick = function () {
   toast('Save data wiped');
 };
 
-// Keyboard Bindings
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === 'Escape') return closeAll();
@@ -1368,7 +1442,6 @@ document.addEventListener('keydown', e => {
   else if (k === 'n') { over ? newPuzzle() : skip(); }
 });
 
-// Daily Login Bonus
 function ds(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
 function daily() {
   const now = new Date(), today = ds(now);
@@ -1390,7 +1463,6 @@ if (!DIFF[S.diff]) S.diff = 'normal';
 applySkin();
 newPuzzle();
 
-// Cloud Save Sync + Fallback
 (async () => {
   try {
     const to = new Promise(r => setTimeout(() => r(null), 4000));
@@ -1421,7 +1493,7 @@ newPuzzle();
 })();
 
 if (eventOn() && (!S.owned.includes('hallo') || !S.owned.includes('reaper'))) {
-  setTimeout(() => toast('🎃 Limited Halloween & Grim Harvest skins in Shop!'), 2600);
+  setTimeout(() => toast('🎃 Limited Halloween & Grim Harvest skins in Shop!'), 2400);
 }
 </script>
 </body>
