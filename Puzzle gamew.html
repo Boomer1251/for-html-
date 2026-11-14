@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Generator Run // Overcharged</title>
+<style>
+  :root {
+    --bg: #07090e;
+    --bg-grad: radial-gradient(circle at 50% 0%, #162038 0%, #07090e 70%);
+    --panel: rgba(20, 27, 45, 0.65);
+    --panel-border: rgba(255, 255, 255, 0.12);
+    --panel-highlight: rgba(255, 255, 255, 0.25);
+    --text: #f0f4fc;
+    --muted: #8a99b8;
+    --accent: #00e5ff;
+    --accent-glow: rgba(0, 229, 255, 0.4);
+    --ok: #00ff88;
+    --warn: #ffaa00;
+    --danger: #ff3366;
+    --ring: #00e5ff;
+    --off: #d91e36;
+    --off-glow: rgba(217, 30, 54, 0.35);
+    --on: #00e676;
+    --on-glow: rgba(0, 230, 118, 0.5);
+    --bez: #0b0e17;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image: var(--bg-grad);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+    line-height: 1.4;
+    padding: 16px 16px 48px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle ambient grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* Glassmorphism Panels */
+  .glass {
+    background: var(--panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 var(--panel-highlight);
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 12px 16px;
+    border-radius: 16px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pulse-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s infinite ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.2); opacity: 1; }
+  }
+
+  .ttl {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #ffffff 0%, #a5c4ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .wrap {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 500px);
+    gap: 18px;
+    justify-content: center;
+    align-items: start;
+  }
+
+  .side {
+    border-radius: 18px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .big {
+    text-align: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .big .num {
+    font-size: 2.4rem;
+    font-weight: 900;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 20px rgba(255, 160, 0, 0.4);
+  }
+
+  .lbl {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    padding: 2px 0;
+  }
+
+  .kv span {
+    color: var(--muted);
+  }
+
+  .kv b {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* Glossy Frutiger/Cyber Buttons */
+  button {
+    font: inherit;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  button.b {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.05) 100%), var(--accent);
+    color: #050811;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 11px;
+    padding: 10px 15px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  button.b:hover:not(:disabled) {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  button.b:active:not(:disabled) {
+    transform: translateY(1px) scale(0.97);
+  }
+
+  button.b.alt {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  button.b.alt:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  button.b.sel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%), var(--accent);
+    color: #050811;
+    border-color: #fff;
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+
+  button.b.blitz-active {
+    background: linear-gradient(180deg, #ff5e7e 0%, #d91e36 100%);
+    color: #fff;
+    border-color: #ff9eb0;
+    box-shadow: 0 0 18px rgba(255, 51, 102, 0.6);
+  }
+
+  button.b.sm {
+    padding: 7px 12px;
+    font-size: 0.83rem;
+    border-radius: 9px;
+  }
+
+  button.b:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .modes {
+    margin-bottom: 14px;
+    align-items: center;
+  }
+
+  /* Heavy Industrial Generator Chassis */
+  .gen {
+    background: linear-gradient(145deg, #161b28 0%, #090c12 100%);
+    border-radius: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 
+      0 20px 40px rgba(0, 0, 0, 0.65),
+      inset 0 2px 3px rgba(255, 255, 255, 0.15),
+      inset 0 -4px 10px rgba(0, 0, 0, 0.8);
+    padding: 16px;
+    position: relative;
+    transition: transform 0.1s ease, box-shadow 0.3s ease;
+  }
+
+  .gen.shake {
+    animation: chassisShake 0.28s cubic-bezier(.36,.07,.19,.97) both;
+  }
+
+  .gen.surge {
+    box-shadow: 
+      0 0 40px var(--on-glow),
+      0 20px 40px rgba(0, 0, 0, 0.65),
+      inset 0 0 20px var(--on-glow);
+  }
+
+  @keyframes chassisShake {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(3px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+
+  /* Decorative corner bolts */
+  .bolt {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #68738c, #1c2230);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.3), 0 1px 2px #000;
+  }
+  .bolt.tl { top: 8px; left: 8px; }
+  .bolt.tr { top: 8px; right: 8px; }
+  .bolt.bl { bottom: 8px; left: 8px; }
+  .bolt.br { bottom: 8px; right: 8px; }
+
+  /* Progress Power Bar inside Generator */
+  .power-bar-wrap {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 99px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .power-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--off), var(--on));
+    box-shadow: 0 0 10px var(--on-glow);
+    transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .bd {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    background: var(--bez);
+    padding: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    box-shadow: inset 0 6px 16px rgba(0, 0, 0, 0.85);
+  }
+
+  /* Tactile Illuminated Switch Tiles */
+  .t {
+    aspect-ratio: 1 / 1.05;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, 0.25) 100%), var(--off);
+    box-shadow: 0 4px 12px var(--off-glow), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    font-size: clamp(1.4rem, 6.5vw, 2.2rem);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.08s ease;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+
+  .t.on {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, 0.15) 100%), var(--on);
+    box-shadow: 0 0 18px var(--on-glow), inset 0 1px 2px rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.55);
+  }
+
+  .t:active:not(.lock *) {
+    transform: scale(0.92);
+  }
+
+  .t.flip-anim {
+    animation: tilePop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes tilePop {
+    0% { transform: scale(1); }
+    45% { transform: scale(0.91); }
+    100% { transform: scale(1); }
+  }
+
+  .t.mk {
+    box-shadow: 0 0 0 3px #fff, 0 0 22px #fff, 0 0 30px var(--accent);
+    z-index: 2;
+    animation: hintPulse 1s infinite alternate;
+  }
+
+  @keyframes hintPulse {
+    from { transform: scale(0.97); }
+    to { transform: scale(1.03); }
+  }
+
+  .key-badge {
+    position: absolute;
+    top: 5px;
+    left: 7px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.65);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+
+  .lock .t {
+    cursor: default;
+  }
+
+  .info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin: 14px 4px 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .blitz-timer {
+    color: var(--danger);
+    font-weight: 800;
+    font-size: 1.05rem;
+    text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+  }
+
+  .res {
+    min-height: 4.2em;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+  }
+
+  .res.active {
+    background: rgba(0, 255, 136, 0.08);
+    border-color: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 255, 136, 0.12);
+  }
+
+  .win {
+    color: var(--ok);
+    font-weight: 800;
+    font-size: 1.05rem;
+  }
+
+  .keys {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 14px;
+    line-height: 1.5;
+  }
+
+  /* Toast Notification */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    transform: translate(-50%, 16px);
+    background: rgba(15, 22, 38, 0.92);
+    backdrop-filter: blur(12px);
+    color: #fff;
+    border: 1px solid var(--accent);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--accent-glow);
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    max-width: 90vw;
+    text-align: center;
+    z-index: 40;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  /* Modals */
+  .ov {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 12, 0.75);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 14px calc(20px + env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    overflow: auto;
+  }
+
+  .ov.open {
+    display: flex;
+    animation: fadeIn 0.18s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .panel {
+    background: #111726;
+    border-radius: 20px;
+    padding: 20px;
+    width: 100%;
+    max-width: 500px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.75);
+  }
+
+  .ph {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .ph h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .sk {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    transition: transform 0.12s ease, border-color 0.15s ease;
+  }
+
+  .sk:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .sk.eq {
+    border: 2px solid var(--accent);
+    background: rgba(0, 229, 255, 0.06);
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
+  }
+
+  .sk.spooky {
+    border-color: rgba(255, 119, 0, 0.45);
+    background: linear-gradient(145deg, rgba(75, 29, 122, 0.2), rgba(255, 119, 0, 0.08));
+  }
+
+  .pv {
+    display: flex;
+    gap: 6px;
+    background: var(--bez);
+    padding: 7px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .pv span {
+    flex: 1;
+    height: 34px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%), var(--off);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+  }
+
+  .pv span + span {
+    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%), var(--on);
+  }
+
+  .nm {
+    font-weight: 800;
+    font-size: 0.96rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tag {
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .lim {
+    color: #ff8c1a;
+    font-weight: 800;
+  }
+
+  .sec {
+    margin: 18px 0 8px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+  }
+
+  .ach {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 0.92rem;
+  }
+
+  .ach.done {
+    color: var(--muted);
+  }
+
+  .ach.done span:first-child::before {
+    content: "✓ ";
+    color: var(--ok);
+    font-weight: 900;
+  }
+
+  /* Particle Overlay Canvas */
+  #fx {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 35;
+  }
+
+  @media (max-width: 660px) {
+    .wrap {
+      grid-template-columns: 1fr;
+    }
+    .side {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+    }
+    .big {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<main>
+  <div class="top glass">
+    <div class="brand">
+      <div class="pulse-dot"></div>
+      <h1 class="ttl">GENERATOR RUN</h1>
+    </div>
+    <div class="row">
+      <button class="b alt sm" id="goalBtn">🏆 Goals</button>
+      <button class="b alt sm" id="shopBtn">🛒 Shop</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <aside class="side glass" aria-label="Your stats">
+      <div class="big">
+        <div class="lbl">Win Streak</div>
+        <div class="num" id="sStreak">🔥 0</div>
+        <div class="lbl" id="sMult" style="color:var(--accent);margin-top:2px">×1.0 Bonus</div>
+      </div>
+      <div class="kv"><span>🪙 Coins</span><b id="sCoins" style="color:#ffd21f">0</b></div>
+      <div class="kv"><span>Best Streak</span><b id="sBest">0</b></div>
+      <div class="kv"><span>Solved</span><b id="sSolved">0</b></div>
+      <div class="kv"><span>Perfect</span><b id="sPerfect">0</b></div>
+      <div class="kv"><span>Blitz Best</span><b id="sBlitz">0</b></div>
+      <div class="kv"><span>Daily Goal</span><b id="sGoal">0/5</b></div>
+      <div class="kv"><span>Daily Streak</span><b id="sDaily">0 🗓️</b></div>
+    </aside>
+
+    <div class="game">
+      <div class="row modes">
+        <button class="b alt sm" data-d="easy">Easy</button>
+        <button class="b alt sm" data-d="normal">Normal</button>
+        <button class="b alt sm" data-d="hard">Hard</button>
+        <button class="b alt sm" id="blitz">⚡ Blitz 60s</button>
+      </div>
+
+      <div class="gen" id="gen">
+        <span class="bolt tl"></span><span class="bolt tr"></span>
+        <span class="bolt bl"></span><span class="bolt br"></span>
+        <div class="power-bar-wrap"><div class="power-bar" id="pBar"></div></div>
+        <div class="bd" id="bd"></div>
+      </div>
+
+      <div class="info">
+        <span id="clicks">Clicks: 0</span>
+        <span id="par">Par: 0</span>
+      </div>
+
+      <div class="row">
+        <button class="b" id="undo">Undo</button>
+        <button class="b alt" id="reset">Reset</button>
+        <button class="b alt" id="hint">Hint (5 🪙)</button>
+        <button class="b alt" id="skip">Skip</button>
+      </div>
+
+      <div class="res" id="res" aria-live="polite"></div>
+
+      <p class="keys">
+        <b>Controls:</b> Keys 1–8 flip switches · U undo · R reset · H hint · N next.<br>
+        Match Par for a <b>Perfect (1.5× coins)</b>. Skipping resets your streak.
+      </p>
+    </div>
+  </div>
+</main>
+
+<!-- Shop Modal -->
+<div class="ov" id="ov">
+  <div class="panel" role="dialog" aria-label="Shop">
+    <div class="ph">
+      <h2>Generator Skins</h2>
+      <button class="b alt sm" id="close">Close</button>
+    </div>
+    <div class="grid" id="skins"></div>
+    <div class="sec">System Settings</div>
+    <div class="row">
+      <button class="b alt sm" id="snd"></button>
+      <button class="b alt sm" id="wipe">Reset progress</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goals Modal -->
+<div class="ov" id="ov2">
+  <div class="panel" role="dialog" aria-label="Goals">
+    <div class="ph">
+      <h2>Milestones & Goals</h2>
+      <button class="b alt sm" id="close2">Close</button>
+    </div>
+    <p class="tag" style="margin:0 0 8px">Rewards are deposited automatically upon completion.</p>
+    <div id="achs"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Extended Event Window so Halloween skins are active and purchasable
+const EVENT_END = new Date(2026, 11, 31, 23, 59, 59);
+
+const SKINS = [
+  { id: 'classic', name: 'Classic', price: 0, off: '#d91e36', on: '#00e676', bez: '#0b0e17', offGlow: 'rgba(217,30,54,0.35)', onGlow: 'rgba(0,230,118,0.5)' },
+  { id: 'hallo', name: 'Halloween', price: 120, off: '#4b1d7a', on: '#ff7a00', bez: '#120018', offG: '🕸️', onG: '🎃', limited: true, offGlow: 'rgba(75,29,122,0.45)', onGlow: 'rgba(255,122,0,0.6)' },
+  { id: 'reaper', name: 'Grim Harvest', price: 175, off: '#1f2421', on: '#39ff14', bez: '#080a09', offG: '🪦', onG: '💀', limited: true, offGlow: 'rgba(31,36,33,0.5)', onGlow: 'rgba(57,255,20,0.6)' },
+  { id: 'candy', name: 'Candy Pop', price: 60, off: '#ff4791', on: '#5ce1e6', bez: '#2b0b1e', offGlow: 'rgba(255,71,145,0.4)', onGlow: 'rgba(92,225,230,0.55)' },
+  { id: 'night', name: 'Midnight', price: 90, off: '#2a1a66', on: '#ffe45c', bez: '#0a0620', offGlow: 'rgba(42,26,102,0.4)', onGlow: 'rgba(255,228,92,0.5)' },
+  { id: 'ocean', name: 'Deep Aero', price: 100, off: '#103783', on: '#00f5d4', bez: '#041229', offGlow: 'rgba(16,55,131,0.45)', onGlow: 'rgba(0,245,212,0.55)' },
+  { id: 'cyber', name: 'Cyberpunk', price: 150, off: '#d9048e', on: '#00f0ff', bez: '#0a0016', offGlow: 'rgba(217,4,142,0.45)', onGlow: 'rgba(0,240,255,0.6)' },
+  { id: 'lava', name: 'Core Meltdown', price: 180, off: '#4a0d00', on: '#ff5e00', bez: '#140300', offG: '🪨', onG: '🔥', offGlow: 'rgba(74,13,0,0.5)', onGlow: 'rgba(255,94,0,0.6)' },
+  { id: 'sakura', name: 'Sakura', price: 200, off: '#7a2f55', on: '#ffc7e3', bez: '#240a18', offG: '🍃', onG: '🌸', offGlow: 'rgba(122,47,85,0.4)', onGlow: 'rgba(255,199,227,0.5)' },
+  { id: 'gold', name: 'Overclock Gold', price: 250, off: '#5a4300', on: '#ffd21f', bez: '#1a1200', offG: '⚙️', onG: '⚡', offGlow: 'rgba(90,67,0,0.45)', onGlow: 'rgba(255,210,31,0.65)' }
+];
+
+const DIFF = {
+  easy: { n: [1, 3], m: 0.8 },
+  normal: { n: [3, 5], m: 1 },
+  hard: { n: [5, 8], m: 1.5 }
+};
+
+const GOAL_N = 5;
+const ACH = [
+  { id: 's10', t: 'Solve 10 generators', r: 30, f: () => S.solved >= 10 },
+  { id: 's50', t: 'Solve 50 generators', r: 100, f: () => S.solved >= 50 },
+  { id: 's100', t: 'Solve 100 generators', r: 250, f: () => S.solved >= 100 },
+  { id: 'k5', t: 'Reach a 5 win streak', r: 40, f: () => S.best >= 5 },
+  { id: 'k10', t: 'Reach a 10 win streak', r: 100, f: () => S.best >= 10 },
+  { id: 'k20', t: 'Reach a 20 win streak', r: 200, f: () => S.best >= 20 },
+  { id: 'p5', t: 'Get 5 perfect solves', r: 40, f: () => S.perfect >= 5 },
+  { id: 'p25', t: 'Get 25 perfect solves', r: 120, f: () => S.perfect >= 25 },
+  { id: 'hd', t: 'Beat a Hard generator', r: 60, f: () => !!S.hardWin },
+  { id: 'b10', t: 'Score 10 in Blitz', r: 75, f: () => S.blitzBest >= 10 },
+  { id: 'b20', t: 'Score 20 in Blitz', r: 150, f: () => S.blitzBest >= 20 },
+  { id: 'o3', t: 'Own 3 skins', r: 50, f: () => S.owned.length >= 3 },
+  { id: 'o6', t: 'Own 6 skins', r: 150, f: () => S.owned.length >= 6 }
+];
+
+const KEY = 'generator_run_v1';
+const def = {
+  updated: 0, coins: 0, streak: 0, best: 0, solved: 0, perfect: 0,
+  owned: ['classic'], skin: 'classic', lastDay: '', dayStreak: 0,
+  sound: true, diff: 'normal', blitzBest: 0, hardWin: 0, ach: {}, dayCount: 0, dayDone: false
+};
+
+let S = Object.assign({}, def);
+try {
+  const raw = localStorage.getItem(KEY);
+  if (raw) S = Object.assign({}, def, JSON.parse(raw));
+} catch (e) {}
+
+let rdoc = null, wt;
+const save = () => {
+  S.updated = Date.now();
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+  if (rdoc) {
+    clearTimeout(wt);
+    wt = setTimeout(() => {
+      try { rdoc.set(JSON.parse(JSON.stringify(S))).catch(() => {}); } catch (e) {}
+    }, 400);
+  }
+};
+
+const $ = id => document.getElementById(id);
+
+// Core Grid Logic (2x4 toggle cross)
+const getNeighbors = i => {
+  const r = i >> 2, c = i & 3, res = [];
+  [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dr, dc]) => {
+    const rr = r + dr, cc = c + dc;
+    if (rr >= 0 && rr < 2 && cc >= 0 && cc < 4) res.push(rr * 4 + cc);
+  });
+  return res;
+};
+
+const flip = (b, i) => {
+  getNeighbors(i).forEach(idx => b[idx] ^= 1);
+};
+
+const solved = b => b.every(v => !v);
+
+function minSol(b) {
+  let best = null;
+  for (let m = 0; m < 256; m++) {
+    const g = b.slice(), p = [];
+    for (let i = 0; i < 8; i++) {
+      if (m >> i & 1) { flip(g, i); p.push(i); }
+    }
+    if (solved(g) && (!best || p.length < best.length)) best = p;
+  }
+  return best || [];
+}
+
+const skinOf = id => SKINS.find(s => s.id === id) || SKINS[0];
+const eventOn = () => Date.now() < EVENT_END;
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+// Synthesized Sound Engine (Web Audio API)
+let ac = null;
+function playTone(freq, dur = 0.08, delay = 0, type = 'triangle', vol = 0.08) {
+  if (!S.sound) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, ac.currentTime + delay);
+    g.gain.setValueAtTime(0.001, ac.currentTime + delay);
+    g.gain.exponentialRampToValueAtTime(vol, ac.currentTime + delay + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + delay + dur);
+    o.connect(g);
+    g.connect(ac.destination);
+    o.start(ac.currentTime + delay);
+    o.stop(ac.currentTime + delay + dur + 0.02);
+  } catch (e) {}
+}
+
+function sfxClick(idx, isOn) {
+  const base = isOn ? 440 : 320;
+  playTone(base + idx * 35, 0.07, 0, 'triangle', 0.09);
+  playTone((base + idx * 35) * 1.5, 0.05, 0.01, 'sine', 0.04);
+}
+
+function sfxWin(perfect) {
+  const notes = perfect ? [523.25, 659.25, 783.99, 1046.5] : [440, 554.37, 659.25];
+  notes.forEach((n, idx) => playTone(n, 0.16, idx * 0.065, 'triangle', 0.09));
+}
+
+function sfxError() {
+  playTone(150, 0.14, 0, 'sawtooth', 0.07);
+}
+
+// Particle Confetti System
+const fxCanvas = $('fx');
+const ctx = fxCanvas.getContext('2d');
+let particles = [];
+function resizeFx() {
+  fxCanvas.width = window.innerWidth;
+  fxCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeFx);
+resizeFx();
+
+function spawnBurst(x, y, color, count = 24) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 6;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      size: 3 + Math.random() * 4,
+      color,
+      alpha: 1,
+      decay: 0.02 + Math.random() * 0.02
+    });
+  }
+}
+
+function loopFx() {
+  ctx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.18; // gravity
+    p.alpha -= p.decay;
+    if (p.alpha <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(loopFx);
+}
+loopFx();
+
+// Toast
+let tt;
+function toast(m) {
+  const t = $('toast');
+  t.textContent = m;
+  t.classList.add('show');
+  clearTimeout(tt);
+  tt = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Game State
+let board = [], start = [], par = 0, hist = [], hinted = false, over = false, mark = -1;
+let blitz = { on: false, end: 0, score: 0, tm: null };
+const tiles = [];
+
+for (let i = 0; i < 8; i++) {
+  const t = document.createElement('button');
+  t.className = 't';
+  t.setAttribute('aria-label', 'Switch ' + (i + 1));
+  t.innerHTML = `<span class="key-badge">${i + 1}</span><span class="glyph"></span>`;
+  t.onclick = () => press(i);
+  $('bd').appendChild(t);
+  tiles.push(t);
+}
+
+function applySkin() {
+  const s = skinOf(S.skin);
+  const root = document.documentElement.style;
+  root.setProperty('--off', s.off);
+  root.setProperty('--on', s.on);
+  root.setProperty('--bez', s.bez);
+  root.setProperty('--off-glow', s.offGlow || 'rgba(217,30,54,0.35)');
+  root.setProperty('--on-glow', s.onGlow || 'rgba(0,230,118,0.5)');
+  draw();
+}
+
+function renderSide() {
+  $('sStreak').textContent = '🔥 ' + S.streak;
+  $('sMult').textContent = '×' + (1 + Math.min(S.streak, 10) * 0.1).toFixed(1) + ' Multiplier';
+  $('sCoins').textContent = S.coins.toLocaleString();
+  $('sBest').textContent = S.best;
+  $('sSolved').textContent = S.solved;
+  $('sPerfect').textContent = S.perfect;
+  $('sBlitz').textContent = S.blitzBest;
+  $('sGoal').textContent = S.dayDone ? 'Done ✓' : Math.min(S.dayCount, GOAL_N) + '/' + GOAL_N;
+  $('sDaily').textContent = S.dayStreak + ' 🗓️';
+}
+
+function draw() {
+  const s = skinOf(S.skin);
+  let litCount = 0;
+
+  tiles.forEach((t, i) => {
+    const on = !board[i];
+    if (on) litCount++;
+    t.classList.toggle('on', on);
+    t.classList.toggle('mk', mark === i);
+    t.querySelector('.glyph').textContent = on ? (s.onG || '') : (s.offG || '');
+  });
+
+  // Update Power Bar
+  $('pBar').style.width = ((litCount / 8) * 100) + '%';
+
+  if (blitz.on) {
+    const rem = Math.max(0, Math.ceil((blitz.end - Date.now()) / 1000));
+    $('clicks').innerHTML = `<span class="blitz-timer">⚡ ${rem}s</span>`;
+    $('par').textContent = `Score: ${blitz.score} · Par: ${par}`;
+  } else {
+    $('clicks').textContent = `Clicks: ${hist.length}`;
+    $('par').textContent = `Par: ${par}`;
+  }
+
+  renderSide();
+  $('gen').classList.toggle('lock', over);
+  $('undo').disabled = over || !hist.length;
+  $('hint').disabled = over || blitz.on;
+  $('skip').disabled = over;
+  $('reset').disabled = over || !hist.length;
+
+  document.querySelectorAll('[data-d]').forEach(b => {
+    b.classList.toggle('sel', b.dataset.d === S.diff && !blitz.on);
+    b.disabled = blitz.on;
+  });
+
+  const blitzBtn = $('blitz');
+  blitzBtn.textContent = blitz.on ? 'End Blitz' : '⚡ Blitz 60s';
+  blitzBtn.classList.toggle('blitz-active', blitz.on);
+}
+
+function newPuzzle() {
+  const [a, b] = blitz.on ? [2, 4] : DIFF[S.diff].n;
+  const n = ri(a, b);
+  const idx = [0, 1, 2, 3, 4, 5, 6, 7].sort(() => Math.random() - 0.5).slice(0, n);
+  const bd = Array(8).fill(0);
+  idx.forEach(i => flip(bd, i));
+  if (solved(bd)) return newPuzzle();
+
+  start = bd;
+  board = bd.slice();
+  par = minSol(bd).length;
+  hist = [];
+  hinted = false;
+  over = false;
+  mark = -1;
+  $('gen').classList.remove('surge');
+  const resEl = $('res');
+  resEl.innerHTML = '';
+  resEl.classList.remove('active');
+  draw();
+}
+
+function press(i) {
+  if (over) return;
+  mark = -1;
+  const affected = getNeighbors(i);
+  affected.forEach(idx => {
+    board[idx] ^= 1;
+    const el = tiles[idx];
+    el.classList.remove('flip-anim');
+    void el.offsetWidth; // trigger reflow
+    el.classList.add('flip-anim');
+  });
+
+  hist.push(i);
+  sfxClick(i, !board[i]);
+
+  if (solved(board)) return win();
+  draw();
+}
+
+// Goals & Daily Progress
+function checkAch() {
+  ACH.forEach(a => {
+    if (!S.ach[a.id] && a.f()) {
+      S.ach[a.id] = 1;
+      S.coins += a.r;
+      setTimeout(() => toast('🏆 ' + a.t + ': +' + a.r + ' 🪙'), 600);
+      playTone(880, 0.15, 0, 'sine', 0.1);
+    }
+  });
+}
+
+function bumpDay() {
+  S.dayCount++;
+  if (!S.dayDone && S.dayCount >= GOAL_N) {
+    S.dayDone = true;
+    S.coins += 30;
+    setTimeout(() => toast('🗓️ Daily goal complete: +30 🪙'), 1300);
+  }
+}
+
+function win() {
+  over = true;
+  S.solved++;
+  bumpDay();
+
+  const genRect = $('gen').getBoundingClientRect();
+  const skin = skinOf(S.skin);
+  $('gen').classList.add('surge');
+
+  if (blitz.on) {
+    blitz.score++;
+    checkAch();
+    save();
+    draw();
+    playTone(660, 0.08, 0, 'triangle', 0.09);
+    spawnBurst(genRect.left + genRect.width / 2, genRect.top + genRect.height / 2, skin.on, 16);
+    setTimeout(() => { if (blitz.on) newPuzzle(); }, 220);
+    return;
+  }
+
+  const perfect = hist.length === par && !hinted;
+  S.streak++;
+  S.best = Math.max(S.best, S.streak);
+  if (perfect) S.perfect++;
+  if (S.diff === 'hard') S.hardWin = 1;
+
+  const base = 10 + 4 * par;
+  const mult = 1 + Math.min(S.streak, 10) * 0.1;
+  let gain = Math.round(base * mult * DIFF[S.diff].m * (perfect ? 1.5 : 1));
+  let extra = '';
+  if (S.streak % 5 === 0) {
+    gain += 25;
+    extra = ' 🔥 5-Streak Bonus +25!';
+  }
+
+  S.coins += gain;
+  checkAch();
+  save();
+  draw();
+  sfxWin(perfect);
+  spawnBurst(genRect.left + genRect.width / 2, genRect.top + genRect.height / 2, skin.on, perfect ? 42 : 24);
+
+  const resEl = $('res');
+  resEl.classList.add('active');
+  resEl.innerHTML = `
+    <span class="win">${perfect ? '⚡ PERFECT OVERCHARGE!' : '✅ GENERATOR ONLINE!'} +${gain} 🪙</span>
+    <div style="font-size:0.86rem;color:var(--muted);margin-top:2px">
+      ${perfect ? 'Matched par (' + par + ' clicks) for 1.5× payout!' : 'Solved in ' + hist.length + ' clicks (Par was ' + par + ')'}${extra}
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="b" id="next">Next Generator (N)</button>
+    </div>
+  `;
+  $('next').onclick = newPuzzle;
+  $('next').focus();
+}
+
+// Blitz Mode
+function startBlitz() {
+  blitz = { on: true, end: Date.now() + 60000, score: 0, tm: setInterval(tick, 200) };
+  newPuzzle();
+}
+
+function tick() {
+  if (blitz.end - Date.now() <= 0) endBlitz();
+  else draw();
+}
+
+function endBlitz() {
+  clearInterval(blitz.tm);
+  const sc = blitz.score, gain = sc * 8, rec = sc > S.blitzBest;
+  blitz.on = false;
+  if (rec) S.blitzBest = sc;
+  S.coins += gain;
+  checkAch();
+  save();
+  newPuzzle();
+  over = true;
+
+  const resEl = $('res');
+  resEl.classList.add('active');
+  resEl.innerHTML = `
+    <span class="win">⚡ BLITZ COMPLETE: ${sc} Solved (+${gain} 🪙)</span>
+    <div style="font-size:0.86rem;color:var(--muted);margin-top:2px">
+      ${rec ? '🏆 New Personal Record!' : 'Personal Best: ' + S.blitzBest}
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="b" id="again">Play Blitz Again</button>
+      <button class="b alt" id="back">Standard Mode</button>
+    </div>
+  `;
+  $('again').onclick = startBlitz;
+  $('back').onclick = newPuzzle;
+  draw();
+}
+
+$('blitz').onclick = () => { if (blitz.on) endBlitz(); else startBlitz(); };
+
+// Controls
+function undo() {
+  if (over || !hist.length) return;
+  flip(board, hist.pop());
+  mark = -1;
+  playTone(260, 0.06, 0, 'sine', 0.06);
+  draw();
+}
+
+function reset() {
+  if (over || !hist.length) return;
+  board = start.slice();
+  hist = [];
+  mark = -1;
+  playTone(220, 0.08, 0, 'sine', 0.06);
+  draw();
+}
+
+function hint() {
+  if (over || blitz.on) return;
+  if (S.coins < 5) {
+    sfxError();
+    return toast('Need 5 🪙 for a hint');
+  }
+  S.coins -= 5;
+  hinted = true;
+  mark = minSol(board)[0];
+  save();
+  draw();
+  playTone(740, 0.1, 0, 'sine', 0.07);
+  toast('Click the glowing switch (Perfect bonus disabled)');
+}
+
+function skip() {
+  if (over) return;
+  if (!blitz.on && S.streak > 0) {
+    S.streak = 0;
+    save();
+    const gen = $('gen');
+    gen.classList.remove('shake');
+    void gen.offsetWidth;
+    gen.classList.add('shake');
+    sfxError();
+  }
+  newPuzzle();
+}
+
+$('undo').onclick = undo;
+$('reset').onclick = reset;
+$('hint').onclick = hint;
+$('skip').onclick = skip;
+
+document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+  S.diff = b.dataset.d;
+  save();
+  newPuzzle();
+});
+
+// Shop
+function left() {
+  const ms = EVENT_END - Date.now();
+  if (ms <= 0) return 'Ended';
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5);
+  return d ? d + 'd ' + h + 'h left' : h + 'h left';
+}
+
+function renderShop() {
+  $('skins').innerHTML = '';
+  SKINS.forEach(s => {
+    const own = S.owned.includes(s.id);
+    const eq = S.skin === s.id;
+    const gone = s.limited && !eventOn() && !own;
+    const d = document.createElement('div');
+    d.className = 'sk' + (eq ? ' eq' : '') + (s.limited ? ' spooky' : '');
+    d.innerHTML = `
+      <div class="pv" style="--bez:${s.bez};--off:${s.off};--on:${s.on}">
+        <span>${s.offG || ''}</span>
+        <span>${s.onG || ''}</span>
+      </div>
+      <div>
+        <div class="nm">${s.name} ${s.limited ? '🎃' : ''}</div>
+        <div class="tag">${s.limited ? '<span class="lim">Limited: ' + left() + '</span>' : own ? 'Unlocked' : s.price + ' 🪙'}</div>
+      </div>
+    `;
+    const b = document.createElement('button');
+    b.className = 'b sm' + (eq ? ' alt' : '');
+    if (eq) {
+      b.textContent = 'Equipped';
+      b.disabled = true;
+    } else if (own) {
+      b.textContent = 'Equip';
+      b.onclick = () => {
+        S.skin = s.id;
+        save();
+        applySkin();
+        renderShop();
+        playTone(660, 0.08);
+      };
+    } else if (gone) {
+      b.textContent = 'Expired';
+      b.disabled = true;
+    } else {
+      b.textContent = 'Buy ' + s.price + ' 🪙';
+      b.disabled = S.coins < s.price;
+      b.onclick = () => {
+        S.coins -= s.price;
+        S.owned.push(s.id);
+        S.skin = s.id;
+        checkAch();
+        save();
+        applySkin();
+        renderShop();
+        toast('✨ ' + s.name + ' equipped!');
+        sfxWin(false);
+      };
+    }
+    d.appendChild(b);
+    $('skins').appendChild(d);
+  });
+  $('snd').textContent = 'Audio FX: ' + (S.sound ? 'ON' : 'OFF');
+  renderSide();
+}
+
+function renderGoals() {
+  $('achs').innerHTML = ACH.map(a =>
+    `<div class="ach${S.ach[a.id] ? ' done' : ''}"><span>${a.t}</span><b style="color:#ffd21f">+${a.r} 🪙</b></div>`
+  ).join('') + `<div class="ach"><span>Solve ${GOAL_N} generators in a day</span><b style="color:var(--accent)">+30 🪙 Daily</b></div>`;
+}
+
+const closeAll = () => {
+  $('ov').classList.remove('open');
+  $('ov2').classList.remove('open');
+  draw();
+};
+
+$('shopBtn').onclick = () => { renderShop(); $('ov').classList.add('open'); };
+$('goalBtn').onclick = () => { renderGoals(); $('ov2').classList.add('open'); };
+$('close').onclick = closeAll;
+$('close2').onclick = closeAll;
+$('ov').onclick = e => { if (e.target === $('ov')) closeAll(); };
+$('ov2').onclick = e => { if (e.target === $('ov2')) closeAll(); };
+
+$('snd').onclick = () => {
+  S.sound = !S.sound;
+  save();
+  renderShop();
+  if (S.sound) playTone(520, 0.08);
+};
+
+let armed = false;
+$('wipe').onclick = function () {
+  if (!armed) {
+    armed = true;
+    this.textContent = 'Tap again to wipe data';
+    this.style.borderColor = 'var(--danger)';
+    setTimeout(() => {
+      armed = false;
+      this.textContent = 'Reset progress';
+      this.style.borderColor = '';
+    }, 3000);
+    return;
+  }
+  S = Object.assign({}, def, { ach: {} });
+  save();
+  armed = false;
+  this.textContent = 'Reset progress';
+  this.style.borderColor = '';
+  applySkin();
+  newPuzzle();
+  renderShop();
+  toast('Save data wiped');
+};
+
+// Keyboard Bindings
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') return closeAll();
+  if (document.querySelector('.ov.open')) return;
+  const k = e.key.toLowerCase();
+  if (k >= '1' && k <= '8') press(+k - 1);
+  else if (k === 'u') undo();
+  else if (k === 'r') reset();
+  else if (k === 'h') hint();
+  else if (k === 'n') { over ? newPuzzle() : skip(); }
+});
+
+// Daily Login Bonus
+function ds(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function daily() {
+  const now = new Date(), today = ds(now);
+  if (S.lastDay === today) return;
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  S.dayStreak = S.lastDay === ds(y) ? S.dayStreak + 1 : 1;
+  S.dayCount = 0;
+  S.dayDone = false;
+  const bonus = 20 + Math.min(S.dayStreak, 7) * 5;
+  S.coins += bonus;
+  S.lastDay = today;
+  save();
+  setTimeout(() => toast('📅 Daily login bonus +' + bonus + ' 🪙 (Day ' + S.dayStreak + ')'), 400);
+}
+
+if (!skinOf(S.skin)) S.skin = 'classic';
+if (!DIFF[S.diff]) S.diff = 'normal';
+applySkin();
+newPuzzle();
+
+// Cloud Save Sync + Fallback
+(async () => {
+  try {
+    const to = new Promise(r => setTimeout(() => r(null), 4000));
+    const got = await Promise.race([(async () => {
+      const db = await claude.use('db'), user = await claude.use('user');
+      if (!db || !user) return null;
+      const id = await user.id();
+      if (!id) return null;
+      const d = db.collection('data/users/' + id).doc('save');
+      const snap = await d.get();
+      return { d, snap };
+    })(), to]);
+    if (got) {
+      rdoc = got.d;
+      const rd = got.snap.exists ? got.snap.data() : null;
+      if (rd && (rd.updated || 0) > (S.updated || 0)) {
+        S = Object.assign({}, def, rd);
+        if (!skinOf(S.skin)) S.skin = 'classic';
+        if (!DIFF[S.diff]) S.diff = 'normal';
+        applySkin();
+        newPuzzle();
+      } else save();
+    }
+  } catch (e) {}
+  daily();
+  checkAch();
+  draw();
+})();
+
+if (eventOn() && (!S.owned.includes('hallo') || !S.owned.includes('reaper'))) {
+  setTimeout(() => toast('🎃 Limited Halloween & Grim Harvest skins in Shop!'), 2600);
+}
+</script>
+</body>
+</html>
