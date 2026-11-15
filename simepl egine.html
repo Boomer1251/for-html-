@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2D HTML5 Engine + Level Editor</title>
+  <title>2D HTML5 Engine + Voxel Sand & Fixed Bounce Pads</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
     body {
@@ -93,12 +93,13 @@
 <body>
   <div id="viewport">
     <canvas id="game"></canvas>
-    <div id="help-hint">LMB: Place | RMB: Delete | G: Snap Grid | P: Pause</div>
+    <div id="help-hint">LMB: Draw/Place | RMB: Erase | G: Snap Grid | P: Pause</div>
     <div id="toolbar">
       <button class="tool-btn active" data-tool="platform"><span class="swatch" style="background:#3a3a59"></span>Platform</button>
       <button class="tool-btn" data-tool="box"><span class="swatch" style="background:#ff9f1c"></span>Crate</button>
       <button class="tool-btn" data-tool="bounce"><span class="swatch" style="background:#00ff88"></span>Bounce Pad</button>
-      <button class="tool-btn" data-tool="hazard"><span class="swatch" style="background:#ff2a55"></span>Spike/Lava</button>
+      <button class="tool-btn" data-tool="hazard"><span class="swatch" style="background:#ff2a55"></span>Spike</button>
+      <button class="tool-btn" data-tool="sand"><span class="swatch" style="background:#f4d06f"></span>Sand</button>
       <div class="divider"></div>
       <button class="tool-btn active" id="btn-grid">Grid: ON</button>
       <button class="tool-btn" id="btn-pause">Pause: OFF</button>
@@ -221,7 +222,140 @@
     }
 
     // ==========================================
-    // 5. CORE 2D ENGINE (PHYSICS + LOOP)
+    // 5. VOXEL SAND SIMULATION SYSTEM
+    // ==========================================
+    class SandSystem extends Entity {
+      constructor(cellSize = 4) {
+        super(0, 0, 0, 0, '#f4d06f');
+        this.cellSize = cellSize;
+        this.cols = 400;
+        this.rows = 300;
+        // Grid stores color string or null
+        this.grid = new Array(this.cols * this.rows).fill(null);
+        this.offsetX = -800;
+        this.offsetY = -400;
+        this.solid = false;
+        this.static = true;
+        this.removable = false;
+      }
+
+      worldToGrid(wx, wy) {
+        return {
+          c: Math.floor((wx - this.offsetX) / this.cellSize),
+          r: Math.floor((wy - this.offsetY) / this.cellSize)
+        };
+      }
+
+      addSand(wx, wy, radius = 2) {
+        const center = this.worldToGrid(wx, wy);
+        for (let dr = -radius; dr <= radius; dr++) {
+          for (let dc = -radius; dc <= radius; dc++) {
+            if (Math.hypot(dr, dc) <= radius) {
+              const c = center.c + dc;
+              const r = center.r + dr;
+              if (c >= 0 && c < this.cols && r >= 0 && r < this.rows) {
+                const idx = r * this.cols + c;
+                if (!this.grid[idx] && Math.random() < 0.85) {
+                  const shade = Math.floor(Math.random() * 30);
+                  this.grid[idx] = `rgb(${244 + shade}, ${208 + shade}, ${111 + shade})`;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      erase(wx, wy, radius = 3) {
+        const center = this.worldToGrid(wx, wy);
+        for (let dr = -radius; dr <= radius; dr++) {
+          for (let dc = -radius; dc <= radius; dc++) {
+            const c = center.c + dc;
+            const r = center.r + dr;
+            if (c >= 0 && c < this.cols && r >= 0 && r < this.rows) {
+              this.grid[r * this.cols + c] = null;
+            }
+          }
+        }
+      }
+
+      isSolidAt(c, r, engine) {
+        if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return true;
+        if (this.grid[r * this.cols + c] !== null) return true;
+
+        // Check collision against engine static entities/platforms
+        const wx = this.offsetX + c * this.cellSize;
+        const wy = this.offsetY + r * this.cellSize;
+        const testBox = { pos: new Vec2(wx, wy), size: new Vec2(this.cellSize, this.cellSize) };
+
+        for (const ent of engine.entities) {
+          if (ent === this || ent.destroyed) continue;
+          if (ent.solid && engine.aabb(testBox, ent)) return true;
+        }
+        return false;
+      }
+
+      update(dt, engine) {
+        // Sand cellular automata pass (bottom to top for proper gravity settling)
+        for (let r = this.rows - 2; r >= 0; r--) {
+          // Randomize horizontal scan direction to prevent bias
+          const leftToRight = Math.random() < 0.5;
+          for (let i = 0; i < this.cols; i++) {
+            const c = leftToRight ? i : (this.cols - 1 - i);
+            const idx = r * this.cols + c;
+            const color = this.grid[idx];
+            if (!color) continue;
+
+            const belowIdx = (r + 1) * this.cols + c;
+            const downLeftIdx = (r + 1) * this.cols + (c - 1);
+            const downRightIdx = (r + 1) * this.cols + (c + 1);
+
+            // Move straight down if empty
+            if (!this.isSolidAt(c, r + 1, engine)) {
+              this.grid[idx] = null;
+              this.grid[belowIdx] = color;
+            } 
+            // Fall diagonal down-left or down-right
+            else {
+              const leftFree = c > 0 && !this.isSolidAt(c - 1, r + 1, engine);
+              const rightFree = c < this.cols - 1 && !this.isSolidAt(c + 1, r + 1, engine);
+
+              if (leftFree && rightFree) {
+                const targetIdx = Math.random() < 0.5 ? downLeftIdx : downRightIdx;
+                this.grid[idx] = null;
+                this.grid[targetIdx] = color;
+              } else if (leftFree) {
+                this.grid[idx] = null;
+                this.grid[downLeftIdx] = color;
+              } else if (rightFree) {
+                this.grid[idx] = null;
+                this.grid[downRightIdx] = color;
+              }
+            }
+          }
+        }
+      }
+
+      render(ctx) {
+        ctx.fillStyle = '#f4d06f';
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            const color = this.grid[r * this.cols + c];
+            if (color) {
+              ctx.fillStyle = color;
+              ctx.fillRect(
+                this.offsetX + c * this.cellSize,
+                this.offsetY + r * this.cellSize,
+                this.cellSize,
+                this.cellSize
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // ==========================================
+    // 6. CORE 2D ENGINE (PHYSICS + LOOP)
     // ==========================================
     class Engine {
       constructor(canvasId, width = 960, height = 540) {
@@ -258,6 +392,7 @@
       resolvePhysics(dt) {
         const dynamics = this.entities.filter(e => !e.static && !e.destroyed);
         const solids = this.entities.filter(e => e.solid && !e.destroyed);
+        const sandSys = this.entities.find(e => e instanceof SandSystem);
 
         for (const ent of dynamics) {
           ent.grounded = false;
@@ -266,44 +401,80 @@
           ent.vel.x += ent.acc.x * dt;
           ent.vel.y += ent.acc.y * dt;
 
+          // Helper check for overlap with sand voxels
+          const collidesWithSand = (box) => {
+            if (!sandSys) return false;
+            const startC = Math.floor((box.pos.x - sandSys.offsetX) / sandSys.cellSize);
+            const endC = Math.floor((box.pos.x + box.size.x - sandSys.offsetX) / sandSys.cellSize);
+            const startR = Math.floor((box.pos.y - sandSys.offsetY) / sandSys.cellSize);
+            const endR = Math.floor((box.pos.y + box.size.y - sandSys.offsetY) / sandSys.cellSize);
+            
+            for (let r = startR; r <= endR; r++) {
+              for (let c = startC; c <= endC; c++) {
+                if (c >= 0 && c < sandSys.cols && r >= 0 && r < sandSys.rows) {
+                  if (sandSys.grid[r * sandSys.cols + c] !== null) {
+                    const testBox = {
+                      pos: new Vec2(sandSys.offsetX + c * sandSys.cellSize, sandSys.offsetY + r * sandSys.cellSize),
+                      size: new Vec2(sandSys.cellSize, sandSys.cellSize)
+                    };
+                    if (this.aabb(box, testBox)) return true;
+                  }
+                }
+              }
+            }
+            return false;
+          };
+
           // Move & Resolve X
           ent.pos.x += ent.vel.x * dt;
-          if (ent.solid) {
-            for (const other of solids) {
-              if (ent === other || other.destroyed) continue;
-              if (this.aabb(ent, other)) {
-                if (ent.vel.x > 0) {
-                  ent.pos.x = other.pos.x - ent.size.x;
-                  ent.onCollide(other, 'right', this);
-                  other.onCollide(ent, 'left', this);
-                } else if (ent.vel.x < 0) {
-                  ent.pos.x = other.pos.x + other.size.x;
-                  ent.onCollide(other, 'left', this);
-                  other.onCollide(ent, 'right', this);
-                }
-                ent.vel.x = 0;
+          let hitSandX = collidesWithSand(ent);
+          if (hitSandX) {
+            if (ent.vel.x > 0) ent.pos.x -= ent.vel.x * dt;
+            else if (ent.vel.x < 0) ent.pos.x -= ent.vel.x * dt;
+            ent.vel.x = 0;
+          }
+          for (const other of solids) {
+            if (ent === other || other.destroyed) continue;
+            if (this.aabb(ent, other)) {
+              if (ent.vel.x > 0) {
+                ent.pos.x = other.pos.x - ent.size.x;
+                ent.onCollide(other, 'right', this);
+                other.onCollide(ent, 'left', this);
+              } else if (ent.vel.x < 0) {
+                ent.pos.x = other.pos.x + other.size.x;
+                ent.onCollide(other, 'left', this);
+                other.onCollide(ent, 'right', this);
               }
+              ent.vel.x = 0;
             }
           }
 
           // Move & Resolve Y
           ent.pos.y += ent.vel.y * dt;
-          if (ent.solid) {
-            for (const other of solids) {
-              if (ent === other || other.destroyed) continue;
-              if (this.aabb(ent, other)) {
-                if (ent.vel.y > 0) {
-                  ent.pos.y = other.pos.y - ent.size.y;
-                  ent.grounded = true;
-                  ent.onCollide(other, 'bottom', this);
-                  other.onCollide(ent, 'top', this);
-                } else if (ent.vel.y < 0) {
-                  ent.pos.y = other.pos.y + other.size.y;
-                  ent.onCollide(other, 'top', this);
-                  other.onCollide(ent, 'bottom', this);
-                }
-                ent.vel.y = 0;
+          let hitSandY = collidesWithSand(ent);
+          if (hitSandY) {
+            if (ent.vel.y > 0) {
+              ent.pos.y -= ent.vel.y * dt;
+              ent.grounded = true;
+            } else if (ent.vel.y < 0) {
+              ent.pos.y -= ent.vel.y * dt;
+            }
+            ent.vel.y = 0;
+          }
+          for (const other of solids) {
+            if (ent === other || other.destroyed) continue;
+            if (this.aabb(ent, other)) {
+              if (ent.vel.y > 0) {
+                ent.pos.y = other.pos.y - ent.size.y;
+                ent.grounded = true;
+                ent.onCollide(other, 'bottom', this);
+                other.onCollide(ent, 'top', this);
+              } else if (ent.vel.y < 0) {
+                ent.pos.y = other.pos.y + other.size.y;
+                ent.onCollide(other, 'top', this);
+                other.onCollide(ent, 'bottom', this);
               }
+              ent.vel.y = 0;
             }
           }
         }
@@ -347,7 +518,7 @@
     }
 
     // ==========================================
-    // 6. PLACEABLE ENTITY TYPES
+    // 7. PLACEABLE ENTITY TYPES
     // ==========================================
     class Player extends Entity {
       constructor(x, y) {
@@ -373,6 +544,7 @@
 
         if ((input.isPressed('Space') || input.isPressed('KeyW') || input.isPressed('ArrowUp')) && this.grounded) {
           this.vel.y = this.jumpForce;
+          this.grounded = false;
         }
 
         if (this.pos.y > 1400) this.respawn();
@@ -398,7 +570,7 @@
         this.useGravity = true;
       }
       update(dt) {
-        this.vel.x *= Math.pow(0.001, dt); // Ground/air friction
+        this.vel.x *= Math.pow(0.001, dt);
       }
       render(ctx) {
         super.render(ctx);
@@ -414,11 +586,18 @@
         super(x, y, 64, 16, '#00ff88');
         this.static = true;
       }
-      onCollide(other, side) {
+      onCollide(other, side, engine) {
         if (side === 'top' && !other.static) {
-          other.vel.y = -980;
+          other.vel.y = -1050; // High bounce velocity
           other.grounded = false;
+          // Instantly pop the entity slightly above the pad to prevent sticking/collision locking
+          other.pos.y = this.pos.y - other.size.y - 2;
         }
+      }
+      render(ctx) {
+        super.render(ctx);
+        ctx.fillStyle = '#ffffffaa';
+        ctx.fillRect(Math.round(this.pos.x) + 8, Math.round(this.pos.y) + 4, this.size.x - 16, 4);
       }
     }
 
@@ -431,14 +610,24 @@
         if (other.tags.has('player')) other.respawn();
         else if (!other.static) other.destroyed = true;
       }
+      render(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(this.pos.x, this.pos.y + this.size.y);
+        ctx.lineTo(this.pos.x + this.size.x / 2, this.pos.y);
+        ctx.lineTo(this.pos.x + this.size.x, this.pos.y + this.size.y);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
 
     // ==========================================
-    // 7. LEVEL EDITOR CONTROLLER
+    // 8. LEVEL EDITOR CONTROLLER
     // ==========================================
     class LevelEditor {
-      constructor(engine) {
+      constructor(engine, sandSystem) {
         this.engine = engine;
+        this.sandSystem = sandSystem;
         this.gridSize = 32;
         this.snapToGrid = true;
         this.selectedTool = 'platform';
@@ -447,7 +636,8 @@
           platform: { w: 128, h: 32, color: 'rgba(58, 58, 89, 0.55)', create: (x, y) => new Platform(x, y, 128, 32) },
           box:      { w: 32,  h: 32, color: 'rgba(255, 159, 28, 0.55)', create: (x, y) => new Crate(x, y) },
           bounce:   { w: 64,  h: 16, color: 'rgba(0, 255, 136, 0.55)', create: (x, y) => new BouncePad(x, y) },
-          hazard:   { w: 32,  h: 24, color: 'rgba(255, 42, 85, 0.55)', create: (x, y) => new Hazard(x, y) }
+          hazard:   { w: 32,  h: 24, color: 'rgba(255, 42, 85, 0.55)', create: (x, y) => new Hazard(x, y) },
+          sand:     { w: 32,  h: 32, color: 'rgba(244, 208, 111, 0.55)', create: null }
         };
 
         this.bindUI();
@@ -478,6 +668,7 @@
 
         document.getElementById('btn-clear').addEventListener('click', () => {
           this.engine.entities.forEach(e => { if (e.removable) e.destroyed = true; });
+          this.sandSystem.grid.fill(null);
         });
 
         window.addEventListener('keydown', e => {
@@ -487,13 +678,14 @@
           if (e.code === 'Digit2') document.querySelector('[data-tool="box"]').click();
           if (e.code === 'Digit3') document.querySelector('[data-tool="bounce"]').click();
           if (e.code === 'Digit4') document.querySelector('[data-tool="hazard"]').click();
+          if (e.code === 'Digit5') document.querySelector('[data-tool="sand"]').click();
         });
       }
 
       getPlacementPos() {
         const worldMouse = this.engine.camera.screenToWorld(this.engine.input.mouse.pos);
         const bp = this.blueprints[this.selectedTool];
-        if (this.snapToGrid) {
+        if (this.snapToGrid && this.selectedTool !== 'sand') {
           return new Vec2(
             Math.floor(worldMouse.x / this.gridSize) * this.gridSize,
             Math.floor(worldMouse.y / this.gridSize) * this.gridSize
@@ -504,21 +696,26 @@
 
       update() {
         const input = this.engine.input;
+        const worldMouse = this.engine.camera.screenToWorld(input.mouse.pos);
 
-        // Left Click: Place Entity
-        if (input.mouse.clicked) {
-          const pos = this.getPlacementPos();
-          const bp = this.blueprints[this.selectedTool];
-          const candidate = bp.create(pos.x, pos.y);
-
-          // Prevent overlapping solid spawns inside existing entities
-          const blocked = this.engine.entities.some(e => !e.destroyed && this.engine.aabb(candidate, e));
-          if (!blocked) this.engine.add(candidate);
+        // Left Click / Drag: Place Entity or Pour Sand
+        if (input.mouse.down || input.mouse.clicked) {
+          if (this.selectedTool === 'sand') {
+            this.sandSystem.addSand(worldMouse.x, worldMouse.y, 4);
+          } else if (input.mouse.clicked) {
+            const pos = this.getPlacementPos();
+            const bp = this.blueprints[this.selectedTool];
+            const candidate = bp.create(pos.x, pos.y);
+            const blocked = this.engine.entities.some(e => !e.destroyed && this.engine.aabb(candidate, e));
+            if (!blocked) this.engine.add(candidate);
+          }
         }
 
-        // Right Click (or Hold): Delete Entity under cursor
+        // Right Click / Drag: Erase Entity or Sand
         if (input.mouse.rightDown) {
-          const worldMouse = this.engine.camera.screenToWorld(input.mouse.pos);
+          if (this.selectedTool === 'sand' || Math.random() < 0.5) {
+            this.sandSystem.erase(worldMouse.x, worldMouse.y, 6);
+          }
           for (let i = this.engine.entities.length - 1; i >= 0; i--) {
             const ent = this.engine.entities[i];
             if (ent.removable && ent.containsPoint(worldMouse)) {
@@ -551,26 +748,35 @@
       }
 
       renderGhost(ctx) {
-        const pos = this.getPlacementPos();
+        const worldMouse = this.engine.camera.screenToWorld(this.engine.input.mouse.pos);
         const bp = this.blueprints[this.selectedTool];
-        ctx.fillStyle = bp.color;
-        ctx.fillRect(pos.x, pos.y, bp.w, bp.h);
-        ctx.strokeStyle = '#ffffff88';
-        ctx.strokeRect(pos.x + 0.5, pos.y + 0.5, bp.w - 1, bp.h - 1);
+        
+        if (this.selectedTool === 'sand') {
+          ctx.strokeStyle = '#f4d06fbb';
+          ctx.beginPath();
+          ctx.arc(worldMouse.x, worldMouse.y, 4 * this.sandSystem.cellSize, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          const pos = this.getPlacementPos();
+          ctx.fillStyle = bp.color;
+          ctx.fillRect(pos.x, pos.y, bp.w, bp.h);
+          ctx.strokeStyle = '#ffffff88';
+          ctx.strokeRect(pos.x + 0.5, pos.y + 0.5, bp.w - 1, bp.h - 1);
+        }
       }
     }
 
     // ==========================================
-    // 8. BOOT SCENE
+    // 9. BOOT SCENE
     // ==========================================
     const game = new Engine('game');
-    const editor = new LevelEditor(game);
+    const sandSystem = game.add(new SandSystem(4));
+    const editor = new LevelEditor(game, sandSystem);
 
     const player = game.add(new Player(128, 200));
 
-    // Starter Floor
     const floor = new Platform(-256, 448, 1280, 64);
-    floor.removable = false; // Keep main floor safe from accidental deletion
+    floor.removable = false;
     game.add(floor);
 
     game.start(
