@@ -32,24 +32,82 @@
       top: 14px;
       left: 14px;
       font-size: 12px;
-      line-height: 1.5;
-      color: rgba(255, 255, 255, 0.45);
+      line-height: 1.55;
+      color: rgba(255, 255, 255, 0.5);
       pointer-events: none;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
     }
 
     #coords {
       margin-top: 2px;
-      color: rgba(255, 255, 255, 0.35);
+      color: rgba(255, 255, 255, 0.38);
+    }
+
+    #stats-row {
+      margin-top: 2px;
+      color: rgba(130, 225, 255, 0.55);
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: rgba(18, 22, 29, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f3f4f6;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #pause-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 16, 0.62);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    #pause-overlay.open {
+      display: flex;
+    }
+
+    #pause-overlay h1 {
+      font-size: 22px;
+      letter-spacing: 0.22em;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    #pause-overlay p {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.55);
     }
 
     #panel {
       position: fixed;
       top: 14px;
       right: 14px;
-      width: 265px;
-      background: rgba(18, 21, 27, 0.9);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 280px;
+      max-height: calc(100vh - 28px);
+      overflow-y: auto;
+      background: rgba(16, 19, 25, 0.92);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 8px;
       padding: 12px;
       font-size: 12px;
@@ -60,12 +118,24 @@
       display: block;
     }
 
-    .row {
-      margin-bottom: 9px;
+    .sec-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.35);
+      margin: 10px 0 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 8px;
     }
 
-    .row:last-child {
-      margin-bottom: 0;
+    .sec-title:first-child {
+      margin-top: 0;
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .row {
+      margin-bottom: 8px;
     }
 
     .label-row {
@@ -81,26 +151,51 @@
       cursor: pointer;
     }
 
+    .seed-row {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+      padding: 4px 8px;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 11px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
     .btn-row {
       display: flex;
-      gap: 6px;
-      margin-top: 8px;
+      gap: 5px;
+      margin-top: 6px;
+      flex-wrap: wrap;
     }
 
     button {
       flex: 1;
+      min-width: 72px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: #e5e7eb;
-      padding: 5px 8px;
+      padding: 5px 7px;
       border-radius: 5px;
       font-family: inherit;
       font-size: 11px;
       cursor: pointer;
+      transition: background 0.12s ease;
     }
 
     button:hover {
-      background: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.17);
     }
   </style>
 </head>
@@ -108,11 +203,32 @@
   <canvas id="c"></canvas>
 
   <div id="hud">
-    A / D or Arrows: Move &nbsp;|&nbsp; W / Up / Space: Jump &nbsp;|&nbsp; S / Down: Drop &nbsp;|&nbsp; Shift: Dash &nbsp;|&nbsp; Tab: Tuner &nbsp;|&nbsp; R: Respawn &nbsp;|&nbsp; N: New Seed
-    <div id="coords">X: 0m &nbsp;|&nbsp; Biome: Plains &nbsp;|&nbsp; Seed: 0</div>
+    A/D: Move &nbsp;|&nbsp; Space/W: Jump (x2) &nbsp;|&nbsp; S/Down: Drop &nbsp;|&nbsp; Shift: Dash &nbsp;|&nbsp; C: Checkpoint &nbsp;|&nbsp; R: Respawn &nbsp;|&nbsp; N: Seed &nbsp;|&nbsp; P: Pause &nbsp;|&nbsp; Tab: Tuner
+    <div id="coords">X: 0m &nbsp;|&nbsp; Best: 0m &nbsp;|&nbsp; Biome: Plains &nbsp;|&nbsp; Seed: 0</div>
+    <div id="stats-row">Orbs: 0 &nbsp;|&nbsp; Combo: x1 &nbsp;|&nbsp; Speed: 0 u/s &nbsp;|&nbsp; Time: 0.0s</div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="pause-overlay">
+    <h1>PAUSED</h1>
+    <p>Press P or Esc to resume</p>
   </div>
 
   <div id="panel">
+    <div class="sec-title">Seed & Presets</div>
+    <div class="seed-row">
+      <input type="text" id="in-seed" placeholder="Seed #" />
+      <button id="btn-apply-seed" style="flex:0 0 54px;">Load</button>
+      <button id="btn-copy-seed" style="flex:0 0 54px;">Copy</button>
+    </div>
+    <div class="btn-row">
+      <button id="pre-default">Balanced</button>
+      <button id="pre-moon">Low-G Moon</button>
+      <button id="pre-chaos">Hyper Speed</button>
+    </div>
+
+    <div class="sec-title">World Generation</div>
     <div class="row">
       <div class="label-row"><span>Terrain Roughness</span><span id="v-rough">110</span></div>
       <input type="range" id="s-rough" min="0" max="260" step="10" value="110" />
@@ -125,6 +241,8 @@
       <div class="label-row"><span>Gap Frequency</span><span id="v-gap">0.15</span></div>
       <input type="range" id="s-gap" min="0" max="0.6" step="0.05" value="0.15" />
     </div>
+
+    <div class="sec-title">Physics & Movement</div>
     <div class="row">
       <div class="label-row"><span>Gravity</span><span id="v-gravity">2400</span></div>
       <input type="range" id="s-gravity" min="400" max="6000" step="100" value="2400" />
@@ -141,9 +259,21 @@
       <div class="label-row"><span>Dash Impulse</span><span id="v-dash">1100</span></div>
       <input type="range" id="s-dash" min="400" max="2400" step="50" value="1100" />
     </div>
+    <div class="row">
+      <div class="label-row"><span>Camera Zoom</span><span id="v-zoom">1.00</span></div>
+      <input type="range" id="s-zoom" min="0.65" max="1.45" step="0.05" value="1.00" />
+    </div>
+
+    <div class="sec-title">Toggles & Actions</div>
     <div class="btn-row">
       <button id="btn-grid">Grid: ON</button>
+      <button id="btn-sound">SFX: ON</button>
+      <button id="btn-djump">2x Jump: ON</button>
+    </div>
+    <div class="btn-row">
+      <button id="btn-ghost">Ghost: ON</button>
       <button id="btn-seed">New Seed</button>
+      <button id="btn-reset">Reset All</button>
     </div>
   </div>
 
@@ -151,8 +281,103 @@
     const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
     const coordsEl = document.getElementById("coords");
+    const statsEl = document.getElementById("stats-row");
+    const toastEl = document.getElementById("toast");
+    const pauseOverlay = document.getElementById("pause-overlay");
+    const seedInput = document.getElementById("in-seed");
 
     window.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    let toastTimer = null;
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1600);
+    }
+
+    // Procedural Web Audio Synthesizer (zero external files, ultra-crisp retro-minimal SFX)
+    let audioCtx = null;
+    function playSfx(type) {
+      if (!cfg.sound) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === "jump") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(210, now);
+          osc.frequency.exponentialRampToValueAtTime(520, now + 0.11);
+          gain.gain.setValueAtTime(0.11, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === "djump") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(340, now);
+          osc.frequency.exponentialRampToValueAtTime(760, now + 0.13);
+          gain.gain.setValueAtTime(0.11, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.start(now);
+          osc.stop(now + 0.14);
+        } else if (type === "dash") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(420, now);
+          osc.frequency.exponentialRampToValueAtTime(110, now + 0.14);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === "bounce") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(240, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.22);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
+          osc.start(now);
+          osc.stop(now + 0.23);
+        } else if (type === "orb") {
+          osc.type = "sine";
+          const pitch = Math.min(1300, 560 + state.combo * 45);
+          osc.frequency.setValueAtTime(pitch, now);
+          osc.frequency.exponentialRampToValueAtTime(pitch * 1.35, now + 0.09);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === "land") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(125, now);
+          osc.frequency.exponentialRampToValueAtTime(55, now + 0.06);
+          gain.gain.setValueAtTime(0.07, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+          osc.start(now);
+          osc.stop(now + 0.07);
+        } else if (type === "checkpoint") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.setValueAtTime(660, now + 0.07);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        } else if (type === "death") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(190, now);
+          osc.frequency.exponentialRampToValueAtTime(52, now + 0.25);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        }
+      } catch (_) {}
+    }
 
     let width = 0;
     let height = 0;
@@ -168,8 +393,7 @@
     window.addEventListener("resize", resize);
     resize();
 
-    const cfg = {
-      seed: Math.floor(Math.random() * 999999) + 1,
+    const DEFAULT_CFG = {
       roughness: 110,
       platformDensity: 0.55,
       gapChance: 0.15,
@@ -178,11 +402,51 @@
       maxSpeed: 480,
       accel: 3800,
       friction: 3400,
-      airControl: 0.68,
+      airControl: 0.72,
       dashSpeed: 1100,
-      dashCooldown: 0.38,
+      dashCooldown: 0.36,
       size: 36,
-      showGrid: true
+      zoom: 1.0,
+      showGrid: true,
+      sound: true,
+      doubleJump: true,
+      showGhost: true
+    };
+
+    const cfg = {
+      seed: Math.floor(Math.random() * 999999) + 1,
+      ...DEFAULT_CFG
+    };
+
+    // Load saved settings & best record
+    try {
+      const saved = JSON.parse(localStorage.getItem("square_qol_cfg") || "null");
+      if (saved) Object.assign(cfg, saved);
+    } catch (_) {}
+
+    function saveCfg() {
+      try {
+        const { seed, ...rest } = cfg;
+        localStorage.setItem("square_qol_cfg", JSON.stringify(rest));
+      } catch (_) {}
+    }
+
+    const state = {
+      paused: false,
+      runTime: 0,
+      bestMeters: Number(localStorage.getItem("square_best_m") || 0),
+      orbs: 0,
+      combo: 1,
+      comboTimer: 0,
+      checkpoint: null,
+      collectedOrbs: new Set(),
+      particles: [],
+      popups: [],
+      shake: 0,
+      hitstop: 0,
+      currentRunGhost: [],
+      bestRunGhost: [],
+      ghostSampleTimer: 0
     };
 
     // Deterministic Hashing & Multi-Octave Noise
@@ -214,7 +478,7 @@
         freq *= 2.03;
         amp *= 0.48;
       }
-      return val / norm; // 0..1
+      return val / norm;
     }
 
     function ridgedFbm(x, octaves = 3) {
@@ -232,12 +496,12 @@
       return val / norm;
     }
 
-    // Biome System (Smooth transitions + distinct architectural profiles)
+    // 4 Biomes
     const BIOMES = [
-      { name: "Plains",    accent: "rgba(130, 210, 255, 0.28)", fill: "#151920", roughMult: 0.65, gapMult: 0.75, platMult: 0.85 },
-      { name: "Monoliths", accent: "rgba(185, 155, 255, 0.30)", fill: "#171722", roughMult: 1.35, gapMult: 0.95, platMult: 1.15 },
-      { name: "Chasms",    accent: "rgba(255, 150, 120, 0.30)", fill: "#1b161a", roughMult: 0.90, gapMult: 1.65, platMult: 1.35 },
-      { name: "Skyspire",  accent: "rgba(120, 240, 195, 0.30)", fill: "#131c1e", roughMult: 1.15, gapMult: 1.15, platMult: 1.45 }
+      { name: "Plains",    accent: "#7dd3fc", fill: "#151920", roughMult: 0.65, gapMult: 0.75, platMult: 0.85 },
+      { name: "Monoliths", accent: "#c4b5fd", fill: "#171722", roughMult: 1.35, gapMult: 0.95, platMult: 1.15 },
+      { name: "Chasms",    accent: "#fda4af", fill: "#1b161a", roughMult: 0.90, gapMult: 1.65, platMult: 1.35 },
+      { name: "Skyspire",  accent: "#6ee7b7", fill: "#131c1e", roughMult: 1.15, gapMult: 1.15, platMult: 1.45 }
     ];
 
     function getBiomeAtTile(tx) {
@@ -247,7 +511,6 @@
       return BIOMES[idx];
     }
 
-    // Physics-Aware Reachability Helpers
     function getMaxJumpHeight() {
       return (cfg.jumpForce * cfg.jumpForce) / (2 * Math.max(cfg.gravity, 1));
     }
@@ -257,7 +520,6 @@
       return cfg.maxSpeed * airTime + cfg.dashSpeed * 0.24;
     }
 
-    // Chunked World Generation
     const TILE_W = 64;
     const CHUNK_TILES = 16;
     const CHUNK_W = TILE_W * CHUNK_TILES;
@@ -267,23 +529,18 @@
       return height * 0.72;
     }
 
-    // Deterministic continuous surface height at any tile X (no chunk-seam cliffs)
     function computeRawSurfaceY(tx) {
       const baseGroundY = getBaseGroundY();
       if (Math.abs(tx) <= 4) return Math.round(baseGroundY / 16) * 16;
 
-      // Smooth fade-in out of spawn safe zone
       const spawnFade = Math.min(1, Math.max(0, (Math.abs(tx) - 4) / 8));
       const biome = getBiomeAtTile(tx);
 
-      // Macro elevation + micro detail + occasional terrace steps
       const macro = (fbm(tx * 0.045, 3) - 0.5) * 2.2;
       const micro = (fbm(tx * 0.18 + 13.1, 3) - 0.5) * 0.9;
       const ridge = (ridgedFbm(tx * 0.08 + 71.4, 2) - 0.5) * 0.8;
 
       let combined = macro + micro * 0.55 + ridge * 0.45;
-
-      // Terracing in Monoliths biome for clean stepped architecture
       if (biome.name === "Monoliths") {
         combined = Math.round(combined * 3.5) / 3.5;
       }
@@ -292,14 +549,12 @@
       return Math.round((baseGroundY + rawOffset) / 16) * 16;
     }
 
-    // Deterministic gap mask so chunks agree across boundaries
     function isTileGap(tx) {
       if (Math.abs(tx) <= 5) return false;
       const biome = getBiomeAtTile(tx);
       const effectiveGapChance = Math.min(0.65, cfg.gapChance * biome.gapMult);
       if (effectiveGapChance <= 0.01) return false;
 
-      // Group gaps into multi-tile chasms (2 to 5 tiles wide) instead of random 1-tile pinholes
       const chasmCell = Math.floor(tx / 6);
       const cellRoll = hash(chasmCell * 19.31 + 7.7);
       if (cellRoll >= effectiveGapChance) return false;
@@ -315,10 +570,10 @@
     function generateChunk(chunkIndex) {
       const blocks = [];
       const decor = [];
+      const orbs = [];
       const startTile = chunkIndex * CHUNK_TILES;
       const maxStepUp = Math.max(48, Math.floor(getMaxJumpHeight() * 0.78));
 
-      // Precompute tile profiles across chunk + 1-tile neighbor margin
       const tiles = [];
       let lastSolidY = computeRawSurfaceY(startTile - 1);
 
@@ -328,7 +583,6 @@
         const gap = isTileGap(tx);
         let surfaceY = computeRawSurfaceY(tx);
 
-        // Clamp vertical step between adjacent tiles so terrain is always climbable
         if (!gap) {
           if (lastSolidY - surfaceY > maxStepUp) {
             surfaceY = Math.round((lastSolidY - maxStepUp) / 16) * 16;
@@ -339,7 +593,7 @@
         tiles.push({ tx, wx: tx * TILE_W, biome, gap, surfaceY });
       }
 
-      // 1. Merge contiguous ground columns with identical surfaceY into clean wide blocks
+      // 1. Merged Ground Blocks
       let runStart = null;
       for (let i = 1; i <= CHUNK_TILES; i++) {
         const t = tiles[i];
@@ -369,7 +623,7 @@
       }
       if (runStart) blocks.push(runStart);
 
-      // 2. Chasm Bridge Platforms & Stepping Stones (guarantees wide gaps are fun & traversable)
+      // 2. Chasm Bridge Platforms + Arc Orbs
       let idx = 1;
       while (idx <= CHUNK_TILES) {
         const t = tiles[idx];
@@ -385,8 +639,12 @@
         const rightRefY = tiles[Math.min(tiles.length - 1, gapEnd)].surfaceY;
         const midY = Math.round(((leftRefY + rightRefY) * 0.5) / 16) * 16;
 
+        // Place jump-guide orb arc over chasms
+        const midX = t.wx + gapTiles * TILE_W * 0.5;
+        orbs.push({ id: `gap_${t.tx}`, x: midX, y: midY - 78, r: 7, accent: t.biome.accent });
+
         if (gapTiles >= 3) {
-          const bridgeX = t.wx + Math.floor(gapTiles * 0.5) * TILE_W - TILE_W * 0.5;
+          const bridgeX = midX - TILE_W * 0.75;
           blocks.push({
             x: bridgeX,
             y: midY - 16,
@@ -400,7 +658,7 @@
         idx = gapEnd;
       }
 
-      // 3. Multi-Tier Parkour Routes, Bounce Pads & Sky Islands
+      // 3. Multi-Tier Parkour Routes, Bounce Pads, Checkpoints & Collectibles
       const maxJumpH = getMaxJumpHeight();
       const tierStep = Math.max(88, Math.min(132, Math.round((maxJumpH * 0.72) / 16) * 16));
 
@@ -411,14 +669,13 @@
         const effectivePlat = Math.min(1, cfg.platformDensity * t.biome.platMult);
         const routeRoll = hash(t.tx * 13.7 + 91.3);
 
-        // Elevated multi-step parkour chains every few tiles
         if (t.tx % 3 === 0 && routeRoll < effectivePlat) {
-          const chainLen = 1 + Math.floor(hash(t.tx * 7.1 + 12) * 3); // 1 to 3 connected platforms
+          const chainLen = 1 + Math.floor(hash(t.tx * 7.1 + 12) * 3);
           let curX = t.wx;
           let curY = t.surfaceY - tierStep;
 
           for (let step = 0; step < chainLen; step++) {
-            const spanTiles = 2 + Math.floor(hash2(t.tx, step * 19 + 3) * 2); // 2 or 3 tiles wide
+            const spanTiles = 2 + Math.floor(hash2(t.tx, step * 19 + 3) * 2);
             const w = spanTiles * TILE_W;
 
             blocks.push({
@@ -431,7 +688,17 @@
               accent: t.biome.accent
             });
 
-            // High-altitude Skyspire bonus island above tall chains
+            // Orb reward on platform chains
+            if (hash2(t.tx, step * 41 + 11) > 0.35) {
+              orbs.push({
+                id: `plat_${t.tx}_${step}`,
+                x: curX + w * 0.5,
+                y: curY - 26,
+                r: 7,
+                accent: t.biome.accent
+              });
+            }
+
             if (step === chainLen - 1 && t.biome.name === "Skyspire" && hash2(t.tx, 99) > 0.45) {
               blocks.push({
                 x: curX + TILE_W * 0.5,
@@ -442,6 +709,13 @@
                 oneWay: true,
                 accent: t.biome.accent
               });
+              orbs.push({
+                id: `sky_${t.tx}`,
+                x: curX + TILE_W * 1.5,
+                y: curY - tierStep - 28,
+                r: 8,
+                accent: "#fde047"
+              });
             }
 
             const dir = hash2(t.tx, step + 7) > 0.25 ? 1 : -1;
@@ -450,8 +724,8 @@
           }
         }
 
-        // Launch / Bounce Pads on flat ground before high cliffs or in Skyspire/Monoliths
-        if (!t.gap && t.tx % 7 === 0 && hash(t.tx * 23.1 + 5) < 0.22 * effectivePlat) {
+        // Bounce Pads
+        if (!t.gap && t.tx % 7 === 0 && hash(t.tx * 23.1 + 5) < 0.24 * effectivePlat) {
           blocks.push({
             x: t.wx + 12,
             y: t.surfaceY - 10,
@@ -460,9 +734,30 @@
             type: "bounce",
             accent: "#5ef2b8"
           });
+          orbs.push({
+            id: `bnc_${t.tx}`,
+            x: t.wx + TILE_W * 0.5,
+            y: t.surfaceY - tierStep * 1.45,
+            r: 7,
+            accent: "#5ef2b8"
+          });
         }
 
-        // Background Architectural Pillars & Monoliths (visual depth, non-solid)
+        // Auto-Checkpoint Beacons every ~48 tiles on solid ground
+        if (!t.gap && t.tx !== 0 && t.tx % 48 === 0) {
+          blocks.push({
+            x: t.wx + TILE_W * 0.5 - 3,
+            y: t.surfaceY - 46,
+            w: 6,
+            h: 46,
+            type: "beacon",
+            spawnX: t.wx + TILE_W * 0.5,
+            spawnY: t.surfaceY - cfg.size / 2 - 4,
+            accent: "#38bdf8"
+          });
+        }
+
+        // Background Architectural Pillars
         if (!t.gap && t.tx % 4 === 0 && hash(t.tx * 31.7 + 17) < 0.48) {
           const pillarH = 120 + Math.floor(hash(t.tx * 9.3) * 260);
           const pillarW = 24 + Math.floor(hash(t.tx * 4.7) * 40);
@@ -470,13 +765,12 @@
             x: t.wx + (TILE_W - pillarW) * 0.5,
             y: t.surfaceY - pillarH,
             w: pillarW,
-            h: pillarH,
-            biome: t.biome.name
+            h: pillarH
           });
         }
       }
 
-      return { blocks, decor };
+      return { blocks, decor, orbs };
     }
 
     function getChunk(chunkIndex) {
@@ -503,6 +797,28 @@
       chunks.clear();
     }
 
+    // Particle & Popup Helpers
+    function spawnParticles(x, y, count, color, speed = 220, upBias = 60) {
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = (0.3 + Math.random() * 0.7) * speed;
+        state.particles.push({
+          x,
+          y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd - upBias,
+          size: 2.5 + Math.random() * 3.5,
+          life: 0.28 + Math.random() * 0.25,
+          maxLife: 0.53,
+          color
+        });
+      }
+    }
+
+    function spawnPopup(x, y, text, color = "#ffffff") {
+      state.popups.push({ x, y, text, color, life: 0.75, maxLife: 0.75 });
+    }
+
     // Player State
     const player = {
       x: 0,
@@ -510,11 +826,13 @@
       vx: 0,
       vy: 0,
       grounded: false,
+      jumpsLeft: 2,
       coyoteTimer: 0,
       jumpBufferTimer: 0,
       dropThroughTimer: 0,
       dashTimer: 0,
       dashFlash: 0,
+      wallSlideDir: 0,
       scaleX: 1,
       scaleY: 1,
       facing: 1,
@@ -526,49 +844,94 @@
       y: getBaseGroundY() - height * 0.55
     };
 
-    function respawnPlayer() {
-      player.x = 0;
-      player.y = getBaseGroundY() - cfg.size / 2 - 4;
+    function respawnPlayer(fullReset = false) {
+      if (fullReset || !state.checkpoint) {
+        player.x = 0;
+        player.y = getBaseGroundY() - cfg.size / 2 - 4;
+        if (fullReset) {
+          state.checkpoint = null;
+          state.runTime = 0;
+          state.orbs = 0;
+          state.combo = 1;
+          state.comboTimer = 0;
+          state.collectedOrbs.clear();
+          state.currentRunGhost = [];
+        }
+      } else {
+        player.x = state.checkpoint.x;
+        player.y = state.checkpoint.y;
+      }
+
       player.vx = 0;
       player.vy = 0;
       player.grounded = false;
+      player.jumpsLeft = cfg.doubleJump ? 2 : 1;
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
       player.dropThroughTimer = 0;
       player.dashTimer = 0;
       player.dashFlash = 0;
+      player.wallSlideDir = 0;
       player.scaleX = 1;
       player.scaleY = 1;
       player.trail.length = 0;
       camera.x = player.x;
       camera.y = player.y - height * 0.1;
+      spawnParticles(player.x, player.y, 14, "#ffffff", 180, 40);
     }
 
-    function newSeed() {
-      cfg.seed = Math.floor(Math.random() * 999999) + 1;
+    function newSeed(customSeed = null) {
+      cfg.seed = customSeed !== null ? customSeed : Math.floor(Math.random() * 999999) + 1;
+      seedInput.value = cfg.seed;
+      state.bestRunGhost = [];
       rebuildWorld();
-      respawnPlayer();
+      respawnPlayer(true);
+      showToast(`Seed: ${cfg.seed}`);
     }
 
     // Input Handling
     const keys = new Set();
 
     window.addEventListener("keydown", (e) => {
+      if (document.activeElement === seedInput) {
+        if (e.code === "Enter") {
+          const val = parseInt(seedInput.value.trim(), 10);
+          if (!Number.isNaN(val) && val > 0) newSeed(val);
+          seedInput.blur();
+        }
+        return;
+      }
+
       if (e.code === "Tab") {
         e.preventDefault();
         document.getElementById("panel").classList.toggle("open");
         return;
       }
+      if (e.code === "KeyP" || e.code === "Escape") {
+        state.paused = !state.paused;
+        pauseOverlay.classList.toggle("open", state.paused);
+        return;
+      }
+      if (state.paused) return;
+
       if (e.code === "KeyR") {
-        respawnPlayer();
+        respawnPlayer(e.shiftKey);
+        showToast(e.shiftKey ? "Full Run Reset" : "Respawned");
         return;
       }
       if (e.code === "KeyN") {
         newSeed();
         return;
       }
+      if (e.code === "KeyC") {
+        state.checkpoint = { x: player.x, y: player.y };
+        playSfx("checkpoint");
+        spawnParticles(player.x, player.y, 16, "#38bdf8", 190, 50);
+        showToast(`Checkpoint saved at ${Math.round(player.x / TILE_W)}m`);
+        return;
+      }
       if ((e.code === "Space" || e.code === "KeyW" || e.code === "ArrowUp") && !keys.has(e.code)) {
-        player.jumpBufferTimer = 0.12;
+        player.jumpBufferTimer = 0.13;
       }
       if ((e.code === "KeyS" || e.code === "ArrowDown") && !keys.has(e.code)) {
         player.dropThroughTimer = 0.18;
@@ -596,13 +959,20 @@
       return ix;
     }
 
-    function executeJump() {
-      player.vy = -cfg.jumpForce;
+    function executeJump(isAirJump = false, wallJumpDir = 0) {
+      player.vy = -cfg.jumpForce * (isAirJump ? 0.92 : 1);
+      if (wallJumpDir !== 0) {
+        player.vx = wallJumpDir * cfg.maxSpeed * 1.15;
+        player.facing = wallJumpDir;
+      }
       player.grounded = false;
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
-      player.scaleX = 0.74;
-      player.scaleY = 1.3;
+      player.scaleX = 0.72;
+      player.scaleY = 1.32;
+
+      playSfx(isAirJump ? "djump" : "jump");
+      spawnParticles(player.x, player.y + cfg.size * 0.45, isAirJump ? 12 : 8, isAirJump ? "#7dd3fc" : "#ffffff", 150, 20);
     }
 
     function triggerDash() {
@@ -611,20 +981,33 @@
       const dir = ix !== 0 ? ix : player.facing;
 
       player.vx = dir * cfg.dashSpeed;
-      player.vy = Math.min(player.vy, 0) * 0.25;
+      player.vy = Math.min(player.vy, 0) * 0.2;
       player.dashTimer = cfg.dashCooldown;
       player.dashFlash = 1;
-      player.scaleX = 1.32;
-      player.scaleY = 0.72;
+      player.scaleX = 1.36;
+      player.scaleY = 0.68;
+      state.shake = Math.max(state.shake, 4);
+
+      playSfx("dash");
+      spawnParticles(player.x, player.y, 14, "#ffffff", 240, 10);
     }
 
     // Tuner UI Bindings
-    function bindSlider(id, valId, key, rebuild = false) {
+    const sliderBindings = [];
+    function bindSlider(id, valId, key, rebuild = false, decimals = 0) {
       const el = document.getElementById(id);
       const out = document.getElementById(valId);
+      const sync = () => {
+        el.value = cfg[key];
+        out.textContent = decimals > 0 ? Number(cfg[key]).toFixed(decimals) : cfg[key];
+      };
+      sync();
+      sliderBindings.push(sync);
+
       el.addEventListener("input", () => {
         cfg[key] = Number(el.value);
-        out.textContent = cfg[key];
+        out.textContent = decimals > 0 ? cfg[key].toFixed(decimals) : cfg[key];
+        saveCfg();
         if (rebuild) rebuildWorld();
       });
     }
@@ -636,16 +1019,65 @@
     bindSlider("s-jump", "v-jump", "jumpForce", true);
     bindSlider("s-speed", "v-speed", "maxSpeed", true);
     bindSlider("s-dash", "v-dash", "dashSpeed");
+    bindSlider("s-zoom", "v-zoom", "zoom", false, 2);
 
-    const btnGrid = document.getElementById("btn-grid");
-    btnGrid.addEventListener("click", () => {
+    function syncToggleButtons() {
+      document.getElementById("btn-grid").textContent = `Grid: ${cfg.showGrid ? "ON" : "OFF"}`;
+      document.getElementById("btn-sound").textContent = `SFX: ${cfg.sound ? "ON" : "OFF"}`;
+      document.getElementById("btn-djump").textContent = `2x Jump: ${cfg.doubleJump ? "ON" : "OFF"}`;
+      document.getElementById("btn-ghost").textContent = `Ghost: ${cfg.showGhost ? "ON" : "OFF"}`;
+    }
+    syncToggleButtons();
+
+    document.getElementById("btn-grid").addEventListener("click", () => {
       cfg.showGrid = !cfg.showGrid;
-      btnGrid.textContent = `Grid: ${cfg.showGrid ? "ON" : "OFF"}`;
+      syncToggleButtons();
+      saveCfg();
+    });
+    document.getElementById("btn-sound").addEventListener("click", () => {
+      cfg.sound = !cfg.sound;
+      syncToggleButtons();
+      saveCfg();
+    });
+    document.getElementById("btn-djump").addEventListener("click", () => {
+      cfg.doubleJump = !cfg.doubleJump;
+      syncToggleButtons();
+      saveCfg();
+    });
+    document.getElementById("btn-ghost").addEventListener("click", () => {
+      cfg.showGhost = !cfg.showGhost;
+      syncToggleButtons();
+      saveCfg();
     });
 
-    document.getElementById("btn-seed").addEventListener("click", newSeed);
+    document.getElementById("btn-seed").addEventListener("click", () => newSeed());
+    document.getElementById("btn-apply-seed").addEventListener("click", () => {
+      const val = parseInt(seedInput.value.trim(), 10);
+      if (!Number.isNaN(val) && val > 0) newSeed(val);
+    });
+    document.getElementById("btn-copy-seed").addEventListener("click", () => {
+      navigator.clipboard?.writeText(String(cfg.seed));
+      showToast(`Copied Seed: ${cfg.seed}`);
+    });
 
-    // Axis-Aligned Bounding Box Collision Resolution
+    // Presets
+    function applyPreset(name, overrides) {
+      Object.assign(cfg, DEFAULT_CFG, overrides);
+      sliderBindings.forEach((fn) => fn());
+      syncToggleButtons();
+      saveCfg();
+      rebuildWorld();
+      showToast(`Preset: ${name}`);
+    }
+    document.getElementById("pre-default").addEventListener("click", () => applyPreset("Balanced", {}));
+    document.getElementById("pre-moon").addEventListener("click", () => applyPreset("Low-G Moon", { gravity: 950, jumpForce: 680, roughness: 170 }));
+    document.getElementById("pre-chaos").addEventListener("click", () => applyPreset("Hyper Speed", { maxSpeed: 760, dashSpeed: 1650, gapChance: 0.25 }));
+
+    document.getElementById("btn-reset").addEventListener("click", () => {
+      applyPreset("Default Reset", {});
+      respawnPlayer(true);
+    });
+
     function aabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
       return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
     }
@@ -653,6 +1085,20 @@
     let lastTime = performance.now();
 
     function update(dt) {
+      if (state.paused) return;
+
+      if (state.hitstop > 0) {
+        state.hitstop = Math.max(0, state.hitstop - dt);
+        return;
+      }
+
+      state.runTime += dt;
+      if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 28);
+      if (state.comboTimer > 0) {
+        state.comboTimer -= dt;
+        if (state.comboTimer <= 0) state.combo = 1;
+      }
+
       if (player.dashTimer > 0) player.dashTimer = Math.max(0, player.dashTimer - dt);
       if (player.dashFlash > 0) player.dashFlash = Math.max(0, player.dashFlash - dt * 4);
       if (player.coyoteTimer > 0) player.coyoteTimer = Math.max(0, player.coyoteTimer - dt);
@@ -679,28 +1125,44 @@
         }
       }
 
-      if (player.jumpBufferTimer > 0 && (player.grounded || player.coyoteTimer > 0)) {
-        executeJump();
+      // Jump Execution (Ground/Coyote -> Wall Jump -> Double Jump)
+      if (player.jumpBufferTimer > 0) {
+        if (player.grounded || player.coyoteTimer > 0) {
+          executeJump(false, 0);
+          player.jumpsLeft = cfg.doubleJump ? 1 : 0;
+        } else if (player.wallSlideDir !== 0) {
+          executeJump(false, -player.wallSlideDir);
+          player.jumpsLeft = cfg.doubleJump ? 1 : 0;
+        } else if (cfg.doubleJump && player.jumpsLeft > 0) {
+          player.jumpsLeft--;
+          executeJump(true, 0);
+        }
       }
 
-      // Gravity
+      // Gravity (capped when wall-sliding)
       player.vy += cfg.gravity * dt;
+      if (player.wallSlideDir !== 0 && player.vy > 210) {
+        player.vy = 210;
+      }
 
       const half = cfg.size / 2;
       const solids = getNearbySolids(player.x - 240, player.x + 240);
 
-      // Step X & resolve horizontal collisions (skip one-way platforms)
+      // Step X & resolve horizontal collisions + detect wall slide
+      player.wallSlideDir = 0;
       player.x += player.vx * dt;
       for (let i = 0; i < solids.length; i++) {
         const s = solids[i];
-        if (s.oneWay || s.type === "bounce") continue;
+        if (s.oneWay || s.type === "bounce" || s.type === "beacon") continue;
         if (aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, s.x, s.y, s.w, s.h)) {
           if (player.vx > 0) {
             player.x = s.x - half;
             player.vx = 0;
+            if (!player.grounded && ix > 0) player.wallSlideDir = 1;
           } else if (player.vx < 0) {
             player.x = s.x + s.w + half;
             player.vx = 0;
+            if (!player.grounded && ix < 0) player.wallSlideDir = -1;
           }
         }
       }
@@ -717,19 +1179,34 @@
           continue;
         }
 
+        // Checkpoint Beacon activation
+        if (s.type === "beacon") {
+          if (!state.checkpoint || Math.abs(state.checkpoint.x - s.spawnX) > 10) {
+            state.checkpoint = { x: s.spawnX, y: s.spawnY };
+            playSfx("checkpoint");
+            spawnParticles(s.spawnX, s.y + 12, 18, "#38bdf8", 200, 60);
+            spawnPopup(s.spawnX, s.y - 12, "CHECKPOINT", "#38bdf8");
+          }
+          continue;
+        }
+
         // Bounce pad impulse
         if (s.type === "bounce" && player.vy >= 0) {
           player.y = s.y - half;
           player.vy = -cfg.jumpForce * 1.48;
           player.grounded = false;
+          player.jumpsLeft = cfg.doubleJump ? 1 : 0;
           player.coyoteTimer = 0;
           player.scaleX = 0.65;
           player.scaleY = 1.42;
           player.dashFlash = 0.7;
+          state.shake = Math.max(state.shake, 5);
+          playSfx("bounce");
+          spawnParticles(player.x, s.y, 16, "#5ef2b8", 240, 90);
           continue;
         }
 
-        // One-way platform (passable from below or when pressing Down/S)
+        // One-way platform
         if (s.oneWay) {
           if (player.dropThroughTimer > 0) continue;
           if (player.vy > 0 && prevBottom <= s.y + 8) {
@@ -737,10 +1214,13 @@
               const impact = Math.min(player.vy / 1200, 1);
               player.scaleX = 1 + 0.32 * impact;
               player.scaleY = 1 - 0.26 * impact;
+              playSfx("land");
+              spawnParticles(player.x, s.y, 6, "#ffffff", 110, 20);
             }
             player.y = s.y - half;
             player.vy = 0;
             player.grounded = true;
+            player.jumpsLeft = cfg.doubleJump ? 2 : 1;
             player.coyoteTimer = 0.1;
           }
           continue;
@@ -752,10 +1232,13 @@
             const impact = Math.min(player.vy / 1200, 1);
             player.scaleX = 1 + 0.32 * impact;
             player.scaleY = 1 - 0.26 * impact;
+            playSfx("land");
+            spawnParticles(player.x, s.y, 7, "#ffffff", 120, 25);
           }
           player.y = s.y - half;
           player.vy = 0;
           player.grounded = true;
+          player.jumpsLeft = cfg.doubleJump ? 2 : 1;
           player.coyoteTimer = 0.1;
         } else if (player.vy < 0) {
           player.y = s.y + s.h + half;
@@ -767,17 +1250,58 @@
         player.coyoteTimer = 0.1;
       }
 
+      // Collectible Orbs check
+      const cCenter = Math.floor(player.x / CHUNK_W);
+      for (let c = cCenter - 1; c <= cCenter + 1; c++) {
+        const chunk = getChunk(c);
+        for (let i = 0; i < chunk.orbs.length; i++) {
+          const o = chunk.orbs[i];
+          if (state.collectedOrbs.has(o.id)) continue;
+          if (Math.hypot(player.x - o.x, player.y - o.y) < half + o.r + 6) {
+            state.collectedOrbs.add(o.id);
+            state.orbs += state.combo;
+            state.combo = Math.min(8, state.combo + 1);
+            state.comboTimer = 3.2;
+            state.hitstop = 0.018;
+            playSfx("orb");
+            spawnParticles(o.x, o.y, 12, o.accent, 190, 40);
+            spawnPopup(o.x, o.y - 10, `+${state.combo - 1 || 1}`, o.accent);
+          }
+        }
+      }
+
       // Respawn if fallen into a chasm
       if (player.y > getBaseGroundY() + 900) {
-        respawnPlayer();
+        playSfx("death");
+        state.shake = 9;
+        state.combo = 1;
+        respawnPlayer(false);
         return;
       }
 
-      // Smooth camera tracking
+      // Record Ghost & Personal Best Distance
+      const currentTile = Math.round(player.x / TILE_W);
+      if (currentTile > state.bestMeters) {
+        state.bestMeters = currentTile;
+        localStorage.setItem("square_best_m", String(state.bestMeters));
+        if (state.currentRunGhost.length > 20) {
+          state.bestRunGhost = state.currentRunGhost.slice();
+        }
+      }
+
+      state.ghostSampleTimer += dt;
+      if (state.ghostSampleTimer >= 0.06) {
+        state.ghostSampleTimer = 0;
+        state.currentRunGhost.push({ t: state.runTime, x: player.x, y: player.y });
+        if (state.currentRunGhost.length > 1500) state.currentRunGhost.shift();
+      }
+
+      // Smooth camera tracking with velocity lookahead
       const camLerp = 1 - Math.exp(-9 * dt);
-      const lookAheadX = player.vx * 0.22;
+      const lookAheadX = player.vx * 0.24;
+      const lookAheadY = player.vy * 0.08;
       camera.x += (player.x + lookAheadX - camera.x) * camLerp;
-      camera.y += (player.y - height * 0.08 - camera.y) * (1 - Math.exp(-6 * dt));
+      camera.y += (player.y + lookAheadY - height * 0.08 - camera.y) * (1 - Math.exp(-6.5 * dt));
 
       // Recover squash/stretch
       const spring = 1 - Math.exp(-18 * dt);
@@ -795,17 +1319,43 @@
         if (player.trail[i].alpha <= 0) player.trail.splice(i, 1);
       }
 
-      const currentTile = Math.round(player.x / TILE_W);
+      // Update Particles & Floating Popups
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 450 * dt;
+        p.life -= dt;
+        if (p.life <= 0) state.particles.splice(i, 1);
+      }
+      for (let i = state.popups.length - 1; i >= 0; i--) {
+        const pop = state.popups[i];
+        pop.y -= 36 * dt;
+        pop.life -= dt;
+        if (pop.life <= 0) state.popups.splice(i, 1);
+      }
+
       const curBiome = getBiomeAtTile(currentTile);
-      coordsEl.textContent = `X: ${currentTile}m  |  Biome: ${curBiome.name}  |  Seed: ${cfg.seed}`;
+      coordsEl.textContent = `X: ${currentTile}m  |  Best: ${state.bestMeters}m  |  Biome: ${curBiome.name}  |  Seed: ${cfg.seed}`;
+      statsEl.textContent = `Orbs: ${state.orbs}  |  Combo: x${state.combo}  |  Speed: ${Math.round(currentSpeed)} u/s  |  Time: ${state.runTime.toFixed(1)}s`;
     }
 
-    function draw() {
+    function draw(now) {
       ctx.fillStyle = "#0d0f12";
       ctx.fillRect(0, 0, width, height);
 
-      const camLeft = camera.x - width / 2;
-      const camTop = camera.y - height / 2;
+      const shakeX = state.shake > 0 ? (Math.random() - 0.5) * state.shake * 2 : 0;
+      const shakeY = state.shake > 0 ? (Math.random() - 0.5) * state.shake * 2 : 0;
+
+      const viewW = width / cfg.zoom;
+      const viewH = height / cfg.zoom;
+      const camLeft = camera.x - viewW / 2;
+      const camTop = camera.y - viewH / 2;
+
+      ctx.save();
+      ctx.translate(width / 2 + shakeX, height / 2 + shakeY);
+      ctx.scale(cfg.zoom, cfg.zoom);
+      ctx.translate(-width / 2, -height / 2);
 
       // Parallax Grid
       if (cfg.showGrid) {
@@ -816,13 +1366,13 @@
         ctx.strokeStyle = "rgba(255, 255, 255, 0.032)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        for (let x = startX; x <= width; x += step) {
+        for (let x = startX; x <= viewW; x += step) {
           ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
+          ctx.lineTo(x, viewH);
         }
-        for (let y = startY; y <= height; y += step) {
+        for (let y = startY; y <= viewH; y += step) {
           ctx.moveTo(0, y);
-          ctx.lineTo(width, y);
+          ctx.lineTo(viewW, y);
         }
         ctx.stroke();
       }
@@ -831,7 +1381,7 @@
       ctx.save();
       ctx.translate(-camLeft * 0.35, -camTop * 0.2);
       const bgStart = Math.floor((camLeft * 0.35 - 200) / 180);
-      const bgEnd = Math.floor((camLeft * 0.35 + width + 200) / 180);
+      const bgEnd = Math.floor((camLeft * 0.35 + viewW + 200) / 180);
       for (let i = bgStart; i <= bgEnd; i++) {
         const h = 90 + hash(i * 17.3 + 5) * 240;
         const w = 48 + hash(i * 9.1 + 2) * 70;
@@ -846,7 +1396,7 @@
       ctx.translate(-camLeft, -camTop);
 
       const cStart = Math.floor((camLeft - 160) / CHUNK_W) - 1;
-      const cEnd = Math.floor((camLeft + width + 160) / CHUNK_W) + 1;
+      const cEnd = Math.floor((camLeft + viewW + 160) / CHUNK_W) + 1;
 
       // Background Architectural Pillars
       for (let c = cStart; c <= cEnd; c++) {
@@ -861,41 +1411,102 @@
         }
       }
 
+      // Personal Best Distance Marker Line
+      if (state.bestMeters > 5) {
+        const bestX = state.bestMeters * TILE_W;
+        ctx.save();
+        ctx.strokeStyle = "rgba(253, 224, 71, 0.24)";
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(bestX, getBaseGroundY() - 500);
+        ctx.lineTo(bestX, getBaseGroundY() + 300);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(253, 224, 71, 0.55)";
+        ctx.font = "11px monospace";
+        ctx.fillText(`PB ${state.bestMeters}m`, bestX + 6, getBaseGroundY() - 180);
+        ctx.restore();
+      }
+
       // Render Visible World Chunks
       for (let c = cStart; c <= cEnd; c++) {
-        const { blocks } = getChunk(c);
+        const { blocks, orbs } = getChunk(c);
         for (let i = 0; i < blocks.length; i++) {
           const b = blocks[i];
           if (b.type === "ground") {
             ctx.fillStyle = b.fill || "#161a20";
             ctx.fillRect(b.x, b.y, b.w + 0.5, b.h);
 
-            // Subtle vertical strata lines inside wide merged ground blocks
             ctx.fillStyle = "rgba(255, 255, 255, 0.018)";
             for (let gx = b.x + TILE_W; gx < b.x + b.w; gx += TILE_W) {
               ctx.fillRect(gx, b.y + 4, 1, 180);
             }
 
-            // Biome-tinted surface trim
             ctx.fillStyle = b.accent || "rgba(255, 255, 255, 0.24)";
+            ctx.globalAlpha = 0.42;
             ctx.fillRect(b.x, b.y, b.w + 0.5, 2.5);
+            ctx.globalAlpha = 1;
           } else if (b.type === "bounce") {
             ctx.fillStyle = "rgba(94, 242, 184, 0.24)";
             ctx.fillRect(b.x, b.y, b.w, b.h);
             ctx.fillStyle = "#5ef2b8";
             ctx.fillRect(b.x, b.y, b.w, 3);
+          } else if (b.type === "beacon") {
+            const active = state.checkpoint && Math.abs(state.checkpoint.x - b.spawnX) < 10;
+            ctx.fillStyle = active ? "#38bdf8" : "rgba(255, 255, 255, 0.22)";
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+            ctx.beginPath();
+            ctx.arc(b.x + b.w / 2, b.y, 6, 0, Math.PI * 2);
+            ctx.fill();
           } else {
             ctx.fillStyle = "#1c2129";
             ctx.fillRect(b.x, b.y, b.w, b.h);
 
-            // Top lip highlights one-way pass-through platforms
             ctx.fillStyle = b.accent || "rgba(255, 255, 255, 0.28)";
+            ctx.globalAlpha = 0.5;
             ctx.fillRect(b.x, b.y, b.w, 2);
+            ctx.globalAlpha = 1;
 
             ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
             ctx.lineWidth = 1;
             ctx.strokeRect(b.x, b.y, b.w, b.h);
           }
+        }
+
+        // Render Collectible Orbs
+        const bob = Math.sin(now * 0.005) * 3;
+        for (let i = 0; i < orbs.length; i++) {
+          const o = orbs[i];
+          if (state.collectedOrbs.has(o.id)) continue;
+          ctx.save();
+          ctx.translate(o.x, o.y + bob);
+          ctx.rotate(Math.PI / 4);
+          ctx.fillStyle = o.accent;
+          ctx.globalAlpha = 0.85;
+          ctx.fillRect(-o.r * 0.75, -o.r * 0.75, o.r * 1.5, o.r * 1.5);
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-o.r * 0.75, -o.r * 0.75, o.r * 1.5, o.r * 1.5);
+          ctx.restore();
+        }
+      }
+
+      // Custom Checkpoint Flag Marker
+      if (state.checkpoint) {
+        ctx.fillStyle = "rgba(56, 189, 248, 0.35)";
+        ctx.fillRect(state.checkpoint.x - 1, state.checkpoint.y - 24, 2, 42);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillRect(state.checkpoint.x + 1, state.checkpoint.y - 24, 12, 8);
+      }
+
+      // Best-Run Ghost Replay
+      if (cfg.showGhost && state.bestRunGhost.length > 1) {
+        const gIdx = Math.min(state.bestRunGhost.length - 1, Math.floor(state.runTime / 0.06));
+        const g = state.bestRunGhost[gIdx];
+        if (g) {
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(g.x - cfg.size / 2, g.y - cfg.size / 2, cfg.size, cfg.size);
         }
       }
 
@@ -908,20 +1519,52 @@
         ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s);
       }
 
+      // Particles
+      for (let i = 0; i < state.particles.length; i++) {
+        const p = state.particles[i];
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+
+      // Floating Score Popups
+      ctx.font = "bold 11px monospace";
+      ctx.textAlign = "center";
+      for (let i = 0; i < state.popups.length; i++) {
+        const pop = state.popups[i];
+        ctx.globalAlpha = Math.max(0, pop.life / pop.maxLife);
+        ctx.fillStyle = pop.color;
+        ctx.fillText(pop.text, pop.x, pop.y);
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "left";
+
       // The Square
       ctx.save();
       ctx.translate(player.x, player.y + cfg.size / 2);
       ctx.scale(player.scaleX, player.scaleY);
 
       if (player.dashFlash > 0) {
-        ctx.shadowColor = "rgba(255, 255, 255, 0.65)";
+        ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
         ctx.shadowBlur = 18 * player.dashFlash;
       }
 
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(-cfg.size / 2, -cfg.size, cfg.size, cfg.size);
+
+      // Subtle directional eye-bar + double-jump charge indicator
+      ctx.fillStyle = "#0d0f12";
+      const eyeOffset = player.facing * 5;
+      ctx.fillRect(eyeOffset - 3, -cfg.size * 0.65, 6, 4);
+
+      if (cfg.doubleJump && player.jumpsLeft > 0 && !player.grounded) {
+        ctx.fillStyle = "#7dd3fc";
+        ctx.fillRect(-cfg.size / 2, -3, cfg.size, 3);
+      }
       ctx.restore();
 
+      ctx.restore();
       ctx.restore();
     }
 
@@ -929,11 +1572,12 @@
       const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
       update(dt);
-      draw();
+      draw(now);
       requestAnimationFrame(loop);
     }
 
-    respawnPlayer();
+    seedInput.value = cfg.seed;
+    respawnPlayer(true);
     requestAnimationFrame(loop);
   </script>
 </body>
