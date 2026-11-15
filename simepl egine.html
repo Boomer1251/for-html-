@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2D HTML5 Engine + Dynamic Voxel Sand & Fixed Bounce Pads</title>
+  <title>2D HTML5 Engine + Fixed Sand & Solid Collisions</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
     body {
@@ -228,12 +228,11 @@
       constructor(cellSize = 4) {
         super(0, 0, 0, 0, '#f4d06f');
         this.cellSize = cellSize;
-        // Key: "c,r", Value: { c, r, color, vx, vy }
         this.grains = new Map();
         this.solid = false;
         this.static = true;
         this.removable = false;
-        this.maxY = 1400; // Void floor limit
+        this.maxY = 1400;
       }
 
       key(c, r) { return `${c},${r}`; }
@@ -277,12 +276,13 @@
         }
       }
 
-      isCellBlocked(c, r, staticSolids) {
+      isCellBlocked(c, r, staticSolids, dynamics) {
         if (this.grains.has(this.key(c, r))) return true;
         const wx = c * this.cellSize;
         const wy = r * this.cellSize;
         if (wy > this.maxY) return true;
 
+        // Check static platforms/boxes
         for (let i = 0; i < staticSolids.length; i++) {
           const s = staticSolids[i];
           if (wx < s.pos.x + s.size.x && wx + this.cellSize > s.pos.x &&
@@ -290,16 +290,26 @@
             return true;
           }
         }
+
+        // Check dynamic entities (Player / Crates) so sand cannot fall/spawn inside them!
+        for (let i = 0; i < dynamics.length; i++) {
+          const d = dynamics[i];
+          if (wx < d.pos.x + d.size.x && wx + this.cellSize > d.pos.x &&
+              wy < d.pos.y + d.size.y && wy + this.cellSize > d.pos.y) {
+            return true;
+          }
+        }
+
         return false;
       }
 
-      // Displace sand grains when dynamic entities walk/fall through them
+      // Displace sand grains when dynamic entities walk/fall through them (gentle push, no black-hole teleporting)
       interactWithDynamics(dynamics, staticSolids) {
         for (const ent of dynamics) {
-          const minC = Math.floor(ent.pos.x / this.cellSize) - 1;
-          const maxC = Math.floor((ent.pos.x + ent.size.x) / this.cellSize) + 1;
-          const minR = Math.floor(ent.pos.y / this.cellSize) - 1;
-          const maxR = Math.floor((ent.pos.y + ent.size.y) / this.cellSize) + 1;
+          const minC = Math.floor(ent.pos.x / this.cellSize);
+          const maxC = Math.floor((ent.pos.x + ent.size.x) / this.cellSize);
+          const minR = Math.floor(ent.pos.y / this.cellSize);
+          const maxR = Math.floor((ent.pos.y + ent.size.y) / this.cellSize);
 
           for (let r = minR; r <= maxR; r++) {
             for (let c = minC; c <= maxC; c++) {
@@ -310,31 +320,25 @@
               const wx = c * this.cellSize;
               const wy = r * this.cellSize;
 
-              // Check overlap with entity AABB
               if (wx < ent.pos.x + ent.size.x && wx + this.cellSize > ent.pos.x &&
                   wy < ent.pos.y + ent.size.y && wy + this.cellSize > ent.pos.y) {
 
-                // Determine push direction based on entity movement or side of body
-                const entCenterX = ent.pos.x + ent.size.x / 2;
-                const pushDir = ent.vel.x !== 0 ? Math.sign(ent.vel.x) : (wx >= entCenterX ? 1 : -1);
-
-                // Kick grain outward and upward like splashing/kicking sand
-                const targetC = c + pushDir * (1 + Math.floor(Math.random() * 2));
-                const targetR = r - (1 + Math.floor(Math.random() * 2));
+                // Push grain outward to the nearest free neighboring cell (sides or top)
+                const pushDir = ent.vel.x !== 0 ? Math.sign(ent.vel.x) : (Math.random() < 0.5 ? 1 : -1);
+                const targetC = c + pushDir;
+                const targetR = r;
 
                 this.grains.delete(k);
-                if (!this.isCellBlocked(targetC, targetR, staticSolids)) {
+                if (!this.isCellBlocked(targetC, targetR, staticSolids, dynamics)) {
                   grain.c = targetC;
                   grain.r = targetR;
-                  grain.vx = pushDir * (1 + Math.floor(Math.random() * 2));
                   this.grains.set(this.key(targetC, targetR), grain);
+                } else if (!this.isCellBlocked(c, r - 1, staticSolids, dynamics)) {
+                  grain.r = r - 1;
+                  this.grains.set(this.key(c, r - 1), grain);
                 } else {
-                  // Fallback: pop straight above entity head if tight
-                  const topR = Math.floor(ent.pos.y / this.cellSize) - 1;
-                  if (!this.isCellBlocked(c, topR, staticSolids)) {
-                    grain.r = topR;
-                    this.grains.set(this.key(c, topR), grain);
-                  }
+                  // Put it right back if completely trapped
+                  this.grains.set(k, grain);
                 }
               }
             }
@@ -348,11 +352,9 @@
         const staticSolids = engine.entities.filter(e => e.solid && e.static && !e.destroyed);
         const dynamics = engine.entities.filter(e => !e.static && !e.destroyed);
 
-        // Sort bottom-to-top so falling grains don't block grains above them in the same frame
         const sortedGrains = Array.from(this.grains.values()).sort((a, b) => b.r - a.r);
 
         for (const g of sortedGrains) {
-          // Verify grain wasn't already overwritten
           if (this.grains.get(this.key(g.c, g.r)) !== g) continue;
 
           if (g.r * this.cellSize > this.maxY) {
@@ -363,24 +365,23 @@
           let nextC = g.c;
           let nextR = g.r;
 
-          // Apply horizontal kick momentum if kicked by player/crate
           if (g.vx !== 0) {
             const step = Math.sign(g.vx);
-            if (!this.isCellBlocked(nextC + step, nextR, staticSolids)) {
+            if (!this.isCellBlocked(nextC + step, nextR, staticSolids, dynamics)) {
               nextC += step;
             }
             g.vx -= step;
           }
 
-          // Gravity: Straight down -> Diagonal Left/Right
-          if (!this.isCellBlocked(nextC, nextR + 1, staticSolids)) {
+          // Gravity fall: Down -> Diagonal Left/Right
+          if (!this.isCellBlocked(nextC, nextR + 1, staticSolids, dynamics)) {
             nextR += 1;
           } else {
             const dir = Math.random() < 0.5 ? -1 : 1;
-            if (!this.isCellBlocked(nextC + dir, nextR + 1, staticSolids)) {
+            if (!this.isCellBlocked(nextC + dir, nextR + 1, staticSolids, dynamics)) {
               nextC += dir;
               nextR += 1;
-            } else if (!this.isCellBlocked(nextC - dir, nextR + 1, staticSolids)) {
+            } else if (!this.isCellBlocked(nextC - dir, nextR + 1, staticSolids, dynamics)) {
               nextC -= dir;
               nextR += 1;
             }
@@ -394,7 +395,6 @@
           }
         }
 
-        // Dynamic entities kick & displace sand grains
         this.interactWithDynamics(dynamics, staticSolids);
       }
 
@@ -453,19 +453,12 @@
           ent.vel.x += ent.acc.x * dt;
           ent.vel.y += ent.acc.y * dt;
 
-          // Soft granular drag when wading through sand (never traps you)
+          // Sand standing support (allow jumping off sand piles underneath you)
           if (sandSys && sandSys.grains.size > 0) {
             const footC = Math.floor((ent.pos.x + ent.size.x / 2) / sandSys.cellSize);
             const footR = Math.floor((ent.pos.y + ent.size.y) / sandSys.cellSize);
-            const bodyR = Math.floor((ent.pos.y + ent.size.y * 0.7) / sandSys.cellSize);
-
-            // Allow jumping off packed sand piles
             if (sandSys.grains.has(sandSys.key(footC, footR))) {
               ent.grounded = true;
-            }
-            // Slight wading resistance instead of locking movement
-            if (sandSys.grains.has(sandSys.key(footC, bodyR))) {
-              ent.vel.x *= 0.88;
             }
           }
 
@@ -500,7 +493,6 @@
                   ent.pos.y = other.pos.y - ent.size.y;
                   ent.grounded = true;
                   ent.vel.y = 0;
-                  // Fire collision callbacks AFTER zeroing velocity so bounce pads can override vel.y!
                   ent.onCollide(other, 'bottom', this);
                   other.onCollide(ent, 'top', this);
                 } else if (ent.vel.y < 0) {
@@ -742,7 +734,12 @@
 
         if (input.mouse.down || input.mouse.clicked) {
           if (this.selectedTool === 'sand') {
-            this.sandSystem.addSand(worldMouse.x, worldMouse.y, 4);
+            // Prevent drawing sand directly inside player or crate bounds
+            const testBox = { pos: new Vec2(worldMouse.x - 12, worldMouse.y - 12), size: new Vec2(24, 24) };
+            const blockedByEntity = this.engine.entities.some(e => !e.static && !e.destroyed && this.engine.aabb(testBox, e));
+            if (!blockedByEntity) {
+              this.sandSystem.addSand(worldMouse.x, worldMouse.y, 4);
+            }
           } else if (input.mouse.clicked) {
             const pos = this.getPlacementPos();
             const bp = this.blueprints[this.selectedTool];
