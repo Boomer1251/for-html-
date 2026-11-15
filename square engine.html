@@ -33,19 +33,30 @@
       left: 14px;
       font-size: 12px;
       line-height: 1.55;
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(255, 255, 255, 0.55);
       pointer-events: none;
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
     }
 
     #coords {
       margin-top: 2px;
-      color: rgba(255, 255, 255, 0.38);
+      color: rgba(255, 255, 255, 0.42);
     }
 
     #stats-row {
       margin-top: 2px;
-      color: rgba(130, 225, 255, 0.55);
+      color: #7dd3fc;
+    }
+
+    #mission-box {
+      margin-top: 6px;
+      display: inline-block;
+      background: rgba(16, 20, 27, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 5px 10px;
+      border-radius: 6px;
+      color: #fde047;
+      font-size: 11px;
     }
 
     #toast {
@@ -53,15 +64,15 @@
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%) translateY(10px);
-      background: rgba(18, 22, 29, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(18, 22, 29, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       color: #f3f4f6;
       padding: 7px 14px;
       border-radius: 6px;
       font-size: 12px;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.18s ease, transform 0.18s ease;
+      transition: opacity 0.16s ease, transform 0.16s ease;
     }
 
     #toast.show {
@@ -72,7 +83,7 @@
     #pause-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(10, 12, 16, 0.62);
+      background: rgba(10, 12, 16, 0.65);
       backdrop-filter: blur(4px);
       display: none;
       align-items: center;
@@ -90,12 +101,11 @@
       font-size: 22px;
       letter-spacing: 0.22em;
       color: #ffffff;
-      font-weight: 600;
     }
 
     #pause-overlay p {
       font-size: 12px;
-      color: rgba(255, 255, 255, 0.55);
+      color: rgba(255, 255, 255, 0.6);
     }
 
     #panel {
@@ -169,10 +179,6 @@
       outline: none;
     }
 
-    input[type="text"]:focus {
-      border-color: rgba(255, 255, 255, 0.4);
-    }
-
     .btn-row {
       display: flex;
       gap: 5px;
@@ -191,11 +197,10 @@
       font-family: inherit;
       font-size: 11px;
       cursor: pointer;
-      transition: background 0.12s ease;
     }
 
     button:hover {
-      background: rgba(255, 255, 255, 0.17);
+      background: rgba(255, 255, 255, 0.18);
     }
   </style>
 </head>
@@ -203,9 +208,10 @@
   <canvas id="c"></canvas>
 
   <div id="hud">
-    A/D: Move &nbsp;|&nbsp; Space/W: Jump (x2) &nbsp;|&nbsp; S/Down: Drop &nbsp;|&nbsp; Shift: Dash &nbsp;|&nbsp; C: Checkpoint &nbsp;|&nbsp; R: Respawn &nbsp;|&nbsp; N: Seed &nbsp;|&nbsp; P: Pause &nbsp;|&nbsp; Tab: Tuner
+    A/D: Move &nbsp;|&nbsp; Space/W: Jump (x2) &nbsp;|&nbsp; S/Down: Slam / Drop &nbsp;|&nbsp; Shift: Dash (Smashes Cracked Blocks & Enemies) &nbsp;|&nbsp; C: Checkpoint &nbsp;|&nbsp; R: Respawn &nbsp;|&nbsp; N: Seed &nbsp;|&nbsp; P: Pause &nbsp;|&nbsp; Tab: Tuner
     <div id="coords">X: 0m &nbsp;|&nbsp; Best: 0m &nbsp;|&nbsp; Biome: Plains &nbsp;|&nbsp; Seed: 0</div>
-    <div id="stats-row">Orbs: 0 &nbsp;|&nbsp; Combo: x1 &nbsp;|&nbsp; Speed: 0 u/s &nbsp;|&nbsp; Time: 0.0s</div>
+    <div id="stats-row">Score: 0 &nbsp;|&nbsp; Orbs: 0 &nbsp;|&nbsp; Kills: 0 &nbsp;|&nbsp; Combo: x1 &nbsp;|&nbsp; Time: 0.0s</div>
+    <div id="mission-box">Objective: Reach 100m</div>
   </div>
 
   <div id="toast"></div>
@@ -282,6 +288,7 @@
     const ctx = canvas.getContext("2d");
     const coordsEl = document.getElementById("coords");
     const statsEl = document.getElementById("stats-row");
+    const missionEl = document.getElementById("mission-box");
     const toastEl = document.getElementById("toast");
     const pauseOverlay = document.getElementById("pause-overlay");
     const seedInput = document.getElementById("in-seed");
@@ -296,87 +303,110 @@
       toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1600);
     }
 
-    // Procedural Web Audio Synthesizer (zero external files, ultra-crisp retro-minimal SFX)
+    // Pre-warmed Web Audio context (prevents first-pickup AudioContext initialization stutter)
     let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+    window.addEventListener("pointerdown", ensureAudio, { once: true });
+    window.addEventListener("keydown", ensureAudio, { once: true });
+
     function playSfx(type) {
-      if (!cfg.sound) return;
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") audioCtx.resume();
+      if (!cfg.sound || !audioCtx || audioCtx.state !== "running") return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
 
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        if (type === "jump") {
-          osc.type = "triangle";
-          osc.frequency.setValueAtTime(210, now);
-          osc.frequency.exponentialRampToValueAtTime(520, now + 0.11);
-          gain.gain.setValueAtTime(0.11, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-          osc.start(now);
-          osc.stop(now + 0.12);
-        } else if (type === "djump") {
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(340, now);
-          osc.frequency.exponentialRampToValueAtTime(760, now + 0.13);
-          gain.gain.setValueAtTime(0.11, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-          osc.start(now);
-          osc.stop(now + 0.14);
-        } else if (type === "dash") {
-          osc.type = "sawtooth";
-          osc.frequency.setValueAtTime(420, now);
-          osc.frequency.exponentialRampToValueAtTime(110, now + 0.14);
-          gain.gain.setValueAtTime(0.09, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-          osc.start(now);
-          osc.stop(now + 0.15);
-        } else if (type === "bounce") {
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(240, now);
-          osc.frequency.exponentialRampToValueAtTime(880, now + 0.22);
-          gain.gain.setValueAtTime(0.14, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
-          osc.start(now);
-          osc.stop(now + 0.23);
-        } else if (type === "orb") {
-          osc.type = "sine";
-          const pitch = Math.min(1300, 560 + state.combo * 45);
-          osc.frequency.setValueAtTime(pitch, now);
-          osc.frequency.exponentialRampToValueAtTime(pitch * 1.35, now + 0.09);
-          gain.gain.setValueAtTime(0.09, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-          osc.start(now);
-          osc.stop(now + 0.1);
-        } else if (type === "land") {
-          osc.type = "triangle";
-          osc.frequency.setValueAtTime(125, now);
-          osc.frequency.exponentialRampToValueAtTime(55, now + 0.06);
-          gain.gain.setValueAtTime(0.07, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
-          osc.start(now);
-          osc.stop(now + 0.07);
-        } else if (type === "checkpoint") {
-          osc.type = "triangle";
-          osc.frequency.setValueAtTime(440, now);
-          osc.frequency.setValueAtTime(660, now + 0.07);
-          gain.gain.setValueAtTime(0.1, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-          osc.start(now);
-          osc.stop(now + 0.18);
-        } else if (type === "death") {
-          osc.type = "sawtooth";
-          osc.frequency.setValueAtTime(190, now);
-          osc.frequency.exponentialRampToValueAtTime(52, now + 0.25);
-          gain.gain.setValueAtTime(0.12, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
-          osc.start(now);
-          osc.stop(now + 0.26);
-        }
-      } catch (_) {}
+      if (type === "jump") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(210, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+        osc.start(now);
+        osc.stop(now + 0.11);
+      } else if (type === "djump") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(340, now);
+        osc.frequency.exponentialRampToValueAtTime(760, now + 0.12);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+        osc.start(now);
+        osc.stop(now + 0.13);
+      } else if (type === "dash") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(420, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.13);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      } else if (type === "bounce") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+        gain.gain.setValueAtTime(0.13, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+        osc.start(now);
+        osc.stop(now + 0.21);
+      } else if (type === "orb") {
+        osc.type = "sine";
+        const pitch = Math.min(1300, 560 + state.combo * 45);
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 1.35, now + 0.08);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      } else if (type === "smash") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(48, now + 0.16);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+        osc.start(now);
+        osc.stop(now + 0.17);
+      } else if (type === "ring") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(1040, now + 0.15);
+        gain.gain.setValueAtTime(0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      } else if (type === "land") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(125, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.06);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } else if (type === "checkpoint") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(660, now + 0.07);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } else if (type === "death") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.exponentialRampToValueAtTime(52, now + 0.24);
+        gain.gain.setValueAtTime(0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
     }
 
     let width = 0;
@@ -404,7 +434,7 @@
       friction: 3400,
       airControl: 0.72,
       dashSpeed: 1100,
-      dashCooldown: 0.36,
+      dashCooldown: 0.34,
       size: 36,
       zoom: 1.0,
       showGrid: true,
@@ -418,7 +448,6 @@
       ...DEFAULT_CFG
     };
 
-    // Load saved settings & best record
     try {
       const saved = JSON.parse(localStorage.getItem("square_qol_cfg") || "null");
       if (saved) Object.assign(cfg, saved);
@@ -431,25 +460,40 @@
       } catch (_) {}
     }
 
+    // Dynamic Objectives / Challenges so there is always a goal to chase
+    const MISSIONS = [
+      { label: "Reach 100m", check: () => Math.round(player.x / TILE_W) >= 100, reward: 500 },
+      { label: "Collect 15 Orbs", check: () => state.orbs >= 15, reward: 600 },
+      { label: "Smash 3 Enemies or Walls", check: () => state.kills >= 3, reward: 750 },
+      { label: "Reach an x5 Combo", check: () => state.combo >= 5, reward: 800 },
+      { label: "Reach 250m", check: () => Math.round(player.x / TILE_W) >= 250, reward: 1200 },
+      { label: "Smash 8 Enemies or Walls", check: () => state.kills >= 8, reward: 1500 },
+      { label: "Collect 50 Orbs", check: () => state.orbs >= 50, reward: 2000 },
+      { label: "Reach 500m", check: () => Math.round(player.x / TILE_W) >= 500, reward: 3000 }
+    ];
+
     const state = {
       paused: false,
       runTime: 0,
       bestMeters: Number(localStorage.getItem("square_best_m") || 0),
+      score: 0,
       orbs: 0,
+      kills: 0,
       combo: 1,
       comboTimer: 0,
+      missionIdx: 0,
       checkpoint: null,
       collectedOrbs: new Set(),
+      brokenIds: new Set(),
       particles: [],
       popups: [],
       shake: 0,
-      hitstop: 0,
       currentRunGhost: [],
       bestRunGhost: [],
       ghostSampleTimer: 0
     };
 
-    // Deterministic Hashing & Multi-Octave Noise
+    // Deterministic Hashing & Noise
     function hash(n) {
       const x = Math.sin(n * 127.1 + cfg.seed * 311.7) * 43758.5453123;
       return x - Math.floor(x);
@@ -496,7 +540,6 @@
       return val / norm;
     }
 
-    // 4 Biomes
     const BIOMES = [
       { name: "Plains",    accent: "#7dd3fc", fill: "#151920", roughMult: 0.65, gapMult: 0.75, platMult: 0.85 },
       { name: "Monoliths", accent: "#c4b5fd", fill: "#171722", roughMult: 1.35, gapMult: 0.95, platMult: 1.15 },
@@ -505,7 +548,7 @@
     ];
 
     function getBiomeAtTile(tx) {
-      if (Math.abs(tx) <= 10) return BIOMES[0];
+      if (Math.abs(tx) <= 8) return BIOMES[0];
       const bVal = fbm(tx * 0.011 + 42.7, 2);
       const idx = Math.min(BIOMES.length - 1, Math.floor(bVal * BIOMES.length));
       return BIOMES[idx];
@@ -571,6 +614,7 @@
       const blocks = [];
       const decor = [];
       const orbs = [];
+      const entities = []; // Interactive gameplay elements: enemies, spikes, boost rings, breakables
       const startTile = chunkIndex * CHUNK_TILES;
       const maxStepUp = Math.max(48, Math.floor(getMaxJumpHeight() * 0.78));
 
@@ -623,7 +667,7 @@
       }
       if (runStart) blocks.push(runStart);
 
-      // 2. Chasm Bridge Platforms + Arc Orbs
+      // 2. Chasm Bridges + Boost Rings + Arc Orbs
       let idx = 1;
       while (idx <= CHUNK_TILES) {
         const t = tiles[idx];
@@ -638,15 +682,13 @@
         const leftRefY = tiles[idx - 1].surfaceY;
         const rightRefY = tiles[Math.min(tiles.length - 1, gapEnd)].surfaceY;
         const midY = Math.round(((leftRefY + rightRefY) * 0.5) / 16) * 16;
-
-        // Place jump-guide orb arc over chasms
         const midX = t.wx + gapTiles * TILE_W * 0.5;
+
         orbs.push({ id: `gap_${t.tx}`, x: midX, y: midY - 78, r: 7, accent: t.biome.accent });
 
         if (gapTiles >= 3) {
-          const bridgeX = midX - TILE_W * 0.75;
           blocks.push({
-            x: bridgeX,
+            x: midX - TILE_W * 0.75,
             y: midY - 16,
             w: TILE_W * 1.5,
             h: 16,
@@ -654,11 +696,20 @@
             oneWay: true,
             accent: t.biome.accent
           });
+          // Mid-air dash/jump reset ring over wide chasms
+          entities.push({
+            id: `ring_${t.tx}`,
+            type: "ring",
+            x: midX,
+            y: midY - 125,
+            r: 18,
+            cooldown: 0
+          });
         }
         idx = gapEnd;
       }
 
-      // 3. Multi-Tier Parkour Routes, Bounce Pads, Checkpoints & Collectibles
+      // 3. Multi-Tier Parkour, Enemies, Hazards, Cracked Walls, Bounce Pads & Beacons
       const maxJumpH = getMaxJumpHeight();
       const tierStep = Math.max(88, Math.min(132, Math.round((maxJumpH * 0.72) / 16) * 16));
 
@@ -688,7 +739,6 @@
               accent: t.biome.accent
             });
 
-            // Orb reward on platform chains
             if (hash2(t.tx, step * 41 + 11) > 0.35) {
               orbs.push({
                 id: `plat_${t.tx}_${step}`,
@@ -699,25 +749,6 @@
               });
             }
 
-            if (step === chainLen - 1 && t.biome.name === "Skyspire" && hash2(t.tx, 99) > 0.45) {
-              blocks.push({
-                x: curX + TILE_W * 0.5,
-                y: curY - tierStep,
-                w: TILE_W * 2,
-                h: 16,
-                type: "platform",
-                oneWay: true,
-                accent: t.biome.accent
-              });
-              orbs.push({
-                id: `sky_${t.tx}`,
-                x: curX + TILE_W * 1.5,
-                y: curY - tierStep - 28,
-                r: 8,
-                accent: "#fde047"
-              });
-            }
-
             const dir = hash2(t.tx, step + 7) > 0.25 ? 1 : -1;
             curX += dir * (w + TILE_W * (1 + Math.floor(hash2(t.tx, step + 31) * 1.5)));
             curY -= tierStep * (hash2(t.tx, step + 53) > 0.35 ? 1 : 0);
@@ -725,7 +756,7 @@
         }
 
         // Bounce Pads
-        if (!t.gap && t.tx % 7 === 0 && hash(t.tx * 23.1 + 5) < 0.24 * effectivePlat) {
+        if (!t.gap && t.tx % 7 === 0 && hash(t.tx * 23.1 + 5) < 0.25 * effectivePlat) {
           blocks.push({
             x: t.wx + 12,
             y: t.surfaceY - 10,
@@ -743,7 +774,46 @@
           });
         }
 
-        // Auto-Checkpoint Beacons every ~48 tiles on solid ground
+        // Gameplay Actions: Patrol Sentries (Stomp on top OR Dash through to smash!)
+        if (!t.gap && t.tx % 9 === 0 && hash(t.tx * 17.9 + 3) < 0.52) {
+          entities.push({
+            id: `mob_${t.tx}`,
+            type: "sentry",
+            x: t.wx + TILE_W * 0.5,
+            y: t.surfaceY - 15,
+            baseX: t.wx + TILE_W * 0.5,
+            range: TILE_W * 1.4,
+            size: 30,
+            phase: hash(t.tx) * Math.PI * 2
+          });
+        }
+
+        // Cracked Smashable Blocks (Dash through them for bonus score & combo!)
+        if (!t.gap && t.tx % 11 === 0 && hash(t.tx * 29.3 + 8) < 0.45) {
+          blocks.push({
+            id: `brk_${t.tx}`,
+            x: t.wx + 14,
+            y: t.surfaceY - 72,
+            w: 36,
+            h: 72,
+            type: "breakable",
+            accent: "#fb923c"
+          });
+        }
+
+        // Floor Spike Strips on flat runs (jump or dash over)
+        if (!t.gap && t.tx % 13 === 0 && hash(t.tx * 41.2 + 6) < 0.38) {
+          entities.push({
+            id: `spk_${t.tx}`,
+            type: "spikes",
+            x: t.wx + 10,
+            y: t.surfaceY - 14,
+            w: TILE_W - 20,
+            h: 14
+          });
+        }
+
+        // Checkpoint Beacons every 48 tiles
         if (!t.gap && t.tx !== 0 && t.tx % 48 === 0) {
           blocks.push({
             x: t.wx + TILE_W * 0.5 - 3,
@@ -770,7 +840,7 @@
         }
       }
 
-      return { blocks, decor, orbs };
+      return { blocks, decor, orbs, entities };
     }
 
     function getChunk(chunkIndex) {
@@ -787,7 +857,9 @@
       for (let c = cStart; c <= cEnd; c++) {
         const blocks = getChunk(c).blocks;
         for (let i = 0; i < blocks.length; i++) {
-          list.push(blocks[i]);
+          const b = blocks[i];
+          if (b.id && state.brokenIds.has(b.id)) continue;
+          list.push(b);
         }
       }
       return list;
@@ -797,9 +869,10 @@
       chunks.clear();
     }
 
-    // Particle & Popup Helpers
+    // Capped Particle Pool so bursts never cause frame drops
     function spawnParticles(x, y, count, color, speed = 220, upBias = 60) {
       for (let i = 0; i < count; i++) {
+        if (state.particles.length >= 160) state.particles.shift();
         const ang = Math.random() * Math.PI * 2;
         const spd = (0.3 + Math.random() * 0.7) * speed;
         state.particles.push({
@@ -808,15 +881,16 @@
           vx: Math.cos(ang) * spd,
           vy: Math.sin(ang) * spd - upBias,
           size: 2.5 + Math.random() * 3.5,
-          life: 0.28 + Math.random() * 0.25,
-          maxLife: 0.53,
+          life: 0.28 + Math.random() * 0.22,
+          maxLife: 0.5,
           color
         });
       }
     }
 
     function spawnPopup(x, y, text, color = "#ffffff") {
-      state.popups.push({ x, y, text, color, life: 0.75, maxLife: 0.75 });
+      if (state.popups.length >= 24) state.popups.shift();
+      state.popups.push({ x, y, text, color, life: 0.7, maxLife: 0.7 });
     }
 
     // Player State
@@ -831,7 +905,9 @@
       jumpBufferTimer: 0,
       dropThroughTimer: 0,
       dashTimer: 0,
+      dashActiveTimer: 0, // Invulnerable + smash active window during dash
       dashFlash: 0,
+      slamming: false,
       wallSlideDir: 0,
       scaleX: 1,
       scaleY: 1,
@@ -851,10 +927,14 @@
         if (fullReset) {
           state.checkpoint = null;
           state.runTime = 0;
+          state.score = 0;
           state.orbs = 0;
+          state.kills = 0;
           state.combo = 1;
           state.comboTimer = 0;
+          state.missionIdx = 0;
           state.collectedOrbs.clear();
+          state.brokenIds.clear();
           state.currentRunGhost = [];
         }
       } else {
@@ -870,14 +950,16 @@
       player.jumpBufferTimer = 0;
       player.dropThroughTimer = 0;
       player.dashTimer = 0;
+      player.dashActiveTimer = 0;
       player.dashFlash = 0;
+      player.slamming = false;
       player.wallSlideDir = 0;
       player.scaleX = 1;
       player.scaleY = 1;
       player.trail.length = 0;
       camera.x = player.x;
       camera.y = player.y - height * 0.1;
-      spawnParticles(player.x, player.y, 14, "#ffffff", 180, 40);
+      spawnParticles(player.x, player.y, 12, "#ffffff", 180, 40);
     }
 
     function newSeed(customSeed = null) {
@@ -926,7 +1008,7 @@
       if (e.code === "KeyC") {
         state.checkpoint = { x: player.x, y: player.y };
         playSfx("checkpoint");
-        spawnParticles(player.x, player.y, 16, "#38bdf8", 190, 50);
+        spawnParticles(player.x, player.y, 14, "#38bdf8", 190, 50);
         showToast(`Checkpoint saved at ${Math.round(player.x / TILE_W)}m`);
         return;
       }
@@ -935,6 +1017,13 @@
       }
       if ((e.code === "KeyS" || e.code === "ArrowDown") && !keys.has(e.code)) {
         player.dropThroughTimer = 0.18;
+        // Ground-pound slam when airborne!
+        if (!player.grounded && player.vy < cfg.jumpForce * 1.1) {
+          player.vy = cfg.jumpForce * 1.35;
+          player.slamming = true;
+          player.scaleX = 0.72;
+          player.scaleY = 1.34;
+        }
       }
       if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !keys.has(e.code)) {
         triggerDash();
@@ -966,13 +1055,14 @@
         player.facing = wallJumpDir;
       }
       player.grounded = false;
+      player.slamming = false;
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
       player.scaleX = 0.72;
       player.scaleY = 1.32;
 
       playSfx(isAirJump ? "djump" : "jump");
-      spawnParticles(player.x, player.y + cfg.size * 0.45, isAirJump ? 12 : 8, isAirJump ? "#7dd3fc" : "#ffffff", 150, 20);
+      spawnParticles(player.x, player.y + cfg.size * 0.45, isAirJump ? 10 : 7, isAirJump ? "#7dd3fc" : "#ffffff", 150, 20);
     }
 
     function triggerDash() {
@@ -981,15 +1071,17 @@
       const dir = ix !== 0 ? ix : player.facing;
 
       player.vx = dir * cfg.dashSpeed;
-      player.vy = Math.min(player.vy, 0) * 0.2;
+      player.vy = Math.min(player.vy, 0) * 0.15;
       player.dashTimer = cfg.dashCooldown;
+      player.dashActiveTimer = 0.22;
       player.dashFlash = 1;
-      player.scaleX = 1.36;
-      player.scaleY = 0.68;
+      player.slamming = false;
+      player.scaleX = 1.38;
+      player.scaleY = 0.66;
       state.shake = Math.max(state.shake, 4);
 
       playSfx("dash");
-      spawnParticles(player.x, player.y, 14, "#ffffff", 240, 10);
+      spawnParticles(player.x, player.y, 12, "#ffffff", 240, 10);
     }
 
     // Tuner UI Bindings
@@ -1060,7 +1152,6 @@
       showToast(`Copied Seed: ${cfg.seed}`);
     });
 
-    // Presets
     function applyPreset(name, overrides) {
       Object.assign(cfg, DEFAULT_CFG, overrides);
       sliderBindings.forEach((fn) => fn());
@@ -1082,15 +1173,26 @@
       return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
     }
 
+    function addComboScore(basePoints, x, y, color) {
+      const gained = basePoints * state.combo;
+      state.score += gained;
+      state.combo = Math.min(8, state.combo + 1);
+      state.comboTimer = 3.5;
+      spawnPopup(x, y, `+${gained}`, color);
+    }
+
+    function hurtOrRespawnPlayer() {
+      playSfx("death");
+      state.shake = 10;
+      state.combo = 1;
+      spawnParticles(player.x, player.y, 18, "#fda4af", 250, 70);
+      respawnPlayer(false);
+    }
+
     let lastTime = performance.now();
 
     function update(dt) {
       if (state.paused) return;
-
-      if (state.hitstop > 0) {
-        state.hitstop = Math.max(0, state.hitstop - dt);
-        return;
-      }
 
       state.runTime += dt;
       if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 28);
@@ -1100,6 +1202,7 @@
       }
 
       if (player.dashTimer > 0) player.dashTimer = Math.max(0, player.dashTimer - dt);
+      if (player.dashActiveTimer > 0) player.dashActiveTimer = Math.max(0, player.dashActiveTimer - dt);
       if (player.dashFlash > 0) player.dashFlash = Math.max(0, player.dashFlash - dt * 4);
       if (player.coyoteTimer > 0) player.coyoteTimer = Math.max(0, player.coyoteTimer - dt);
       if (player.jumpBufferTimer > 0) player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
@@ -1108,7 +1211,6 @@
       const ix = getMoveX();
       const controlMult = player.grounded ? 1 : cfg.airControl;
 
-      // Horizontal acceleration & friction
       if (ix !== 0) {
         player.vx += ix * cfg.accel * controlMult * dt;
         if (Math.abs(player.vx) > cfg.maxSpeed) {
@@ -1125,7 +1227,6 @@
         }
       }
 
-      // Jump Execution (Ground/Coyote -> Wall Jump -> Double Jump)
       if (player.jumpBufferTimer > 0) {
         if (player.grounded || player.coyoteTimer > 0) {
           executeJump(false, 0);
@@ -1139,7 +1240,6 @@
         }
       }
 
-      // Gravity (capped when wall-sliding)
       player.vy += cfg.gravity * dt;
       if (player.wallSlideDir !== 0 && player.vy > 210) {
         player.vy = 210;
@@ -1148,13 +1248,23 @@
       const half = cfg.size / 2;
       const solids = getNearbySolids(player.x - 240, player.x + 240);
 
-      // Step X & resolve horizontal collisions + detect wall slide
+      // Step X & resolve horizontal collisions (Dashing smashes cracked orange blocks!)
       player.wallSlideDir = 0;
       player.x += player.vx * dt;
       for (let i = 0; i < solids.length; i++) {
         const s = solids[i];
         if (s.oneWay || s.type === "bounce" || s.type === "beacon") continue;
         if (aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, s.x, s.y, s.w, s.h)) {
+          if (s.type === "breakable" && (player.dashActiveTimer > 0 || Math.abs(player.vx) > cfg.maxSpeed * 1.15)) {
+            state.brokenIds.add(s.id);
+            state.kills++;
+            state.shake = Math.max(state.shake, 7);
+            playSfx("smash");
+            spawnParticles(s.x + s.w / 2, s.y + s.h / 2, 16, "#fb923c", 260, 70);
+            addComboScore(150, s.x + s.w / 2, s.y, "#fb923c");
+            continue;
+          }
+
           if (player.vx > 0) {
             player.x = s.x - half;
             player.vx = 0;
@@ -1179,22 +1289,21 @@
           continue;
         }
 
-        // Checkpoint Beacon activation
         if (s.type === "beacon") {
           if (!state.checkpoint || Math.abs(state.checkpoint.x - s.spawnX) > 10) {
             state.checkpoint = { x: s.spawnX, y: s.spawnY };
             playSfx("checkpoint");
-            spawnParticles(s.spawnX, s.y + 12, 18, "#38bdf8", 200, 60);
+            spawnParticles(s.spawnX, s.y + 12, 16, "#38bdf8", 200, 60);
             spawnPopup(s.spawnX, s.y - 12, "CHECKPOINT", "#38bdf8");
           }
           continue;
         }
 
-        // Bounce pad impulse
         if (s.type === "bounce" && player.vy >= 0) {
           player.y = s.y - half;
           player.vy = -cfg.jumpForce * 1.48;
           player.grounded = false;
+          player.slamming = false;
           player.jumpsLeft = cfg.doubleJump ? 1 : 0;
           player.coyoteTimer = 0;
           player.scaleX = 0.65;
@@ -1202,11 +1311,20 @@
           player.dashFlash = 0.7;
           state.shake = Math.max(state.shake, 5);
           playSfx("bounce");
-          spawnParticles(player.x, s.y, 16, "#5ef2b8", 240, 90);
+          spawnParticles(player.x, s.y, 14, "#5ef2b8", 240, 90);
           continue;
         }
 
-        // One-way platform
+        if (s.type === "breakable" && player.slamming && player.vy > 0) {
+          state.brokenIds.add(s.id);
+          state.kills++;
+          state.shake = Math.max(state.shake, 7);
+          playSfx("smash");
+          spawnParticles(s.x + s.w / 2, s.y + s.h / 2, 16, "#fb923c", 260, 70);
+          addComboScore(150, s.x + s.w / 2, s.y, "#fb923c");
+          continue;
+        }
+
         if (s.oneWay) {
           if (player.dropThroughTimer > 0) continue;
           if (player.vy > 0 && prevBottom <= s.y + 8) {
@@ -1220,24 +1338,25 @@
             player.y = s.y - half;
             player.vy = 0;
             player.grounded = true;
+            player.slamming = false;
             player.jumpsLeft = cfg.doubleJump ? 2 : 1;
             player.coyoteTimer = 0.1;
           }
           continue;
         }
 
-        // Full solid ground
         if (player.vy > 0) {
           if (!wasGrounded && player.vy > 140) {
             const impact = Math.min(player.vy / 1200, 1);
             player.scaleX = 1 + 0.32 * impact;
             player.scaleY = 1 - 0.26 * impact;
             playSfx("land");
-            spawnParticles(player.x, s.y, 7, "#ffffff", 120, 25);
+            spawnParticles(player.x, s.y, player.slamming ? 14 : 6, "#ffffff", player.slamming ? 200 : 120, 25);
           }
           player.y = s.y - half;
           player.vy = 0;
           player.grounded = true;
+          player.slamming = false;
           player.jumpsLeft = cfg.doubleJump ? 2 : 1;
           player.coyoteTimer = 0.1;
         } else if (player.vy < 0) {
@@ -1250,36 +1369,92 @@
         player.coyoteTimer = 0.1;
       }
 
-      // Collectible Orbs check
+      // Interactive Entities & Collectibles (Zero hitstop lag on pickup!)
       const cCenter = Math.floor(player.x / CHUNK_W);
       for (let c = cCenter - 1; c <= cCenter + 1; c++) {
         const chunk = getChunk(c);
+
+        // Orbs
         for (let i = 0; i < chunk.orbs.length; i++) {
           const o = chunk.orbs[i];
           if (state.collectedOrbs.has(o.id)) continue;
-          if (Math.hypot(player.x - o.x, player.y - o.y) < half + o.r + 6) {
+          const dx = player.x - o.x;
+          const dy = player.y - o.y;
+          const hitR = half + o.r + 6;
+          if (dx * dx + dy * dy <= hitR * hitR) {
             state.collectedOrbs.add(o.id);
-            state.orbs += state.combo;
-            state.combo = Math.min(8, state.combo + 1);
-            state.comboTimer = 3.2;
-            state.hitstop = 0.018;
+            state.orbs++;
             playSfx("orb");
-            spawnParticles(o.x, o.y, 12, o.accent, 190, 40);
-            spawnPopup(o.x, o.y - 10, `+${state.combo - 1 || 1}`, o.accent);
+            spawnParticles(o.x, o.y, 9, o.accent, 180, 40);
+            addComboScore(50, o.x, o.y - 10, o.accent);
+          }
+        }
+
+        // Sentries, Boost Rings & Spikes
+        for (let i = 0; i < chunk.entities.length; i++) {
+          const ent = chunk.entities[i];
+          if (state.brokenIds.has(ent.id)) continue;
+
+          if (ent.type === "ring") {
+            if (ent.cooldown > 0) ent.cooldown -= dt;
+            const dx = player.x - ent.x;
+            const dy = player.y - ent.y;
+            if (ent.cooldown <= 0 && dx * dx + dy * dy <= (half + ent.r) * (half + ent.r)) {
+              ent.cooldown = 1.2;
+              player.dashTimer = 0;
+              player.jumpsLeft = cfg.doubleJump ? 2 : 1;
+              player.vy = Math.min(player.vy, -cfg.jumpForce * 0.65);
+              playSfx("ring");
+              spawnParticles(ent.x, ent.y, 12, "#38bdf8", 200, 30);
+              addComboScore(100, ent.x, ent.y - 16, "#38bdf8");
+            }
+          } else if (ent.type === "sentry") {
+            ent.x = ent.baseX + Math.sin(state.runTime * 2.2 + ent.phase) * ent.range;
+            const eHalf = ent.size / 2;
+            if (aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, ent.x - eHalf, ent.y - eHalf, ent.size, ent.size)) {
+              // Stomp from above OR Dash through to destroy!
+              const stomping = player.vy > 0 && prevBottom <= ent.y + 4;
+              const dashing = player.dashActiveTimer > 0;
+              if (stomping || dashing) {
+                state.brokenIds.add(ent.id);
+                state.kills++;
+                state.shake = Math.max(state.shake, 6);
+                if (stomping) {
+                  player.vy = -cfg.jumpForce * 0.95;
+                  player.jumpsLeft = cfg.doubleJump ? 2 : 1;
+                }
+                playSfx("smash");
+                spawnParticles(ent.x, ent.y, 16, "#f43f5e", 250, 70);
+                addComboScore(200, ent.x, ent.y - 14, "#f43f5e");
+              } else {
+                hurtOrRespawnPlayer();
+                return;
+              }
+            }
+          } else if (ent.type === "spikes") {
+            if (player.dashActiveTimer <= 0 && aabbOverlap(player.x - half + 4, player.y - half + 4, cfg.size - 8, cfg.size - 8, ent.x, ent.y, ent.w, ent.h)) {
+              hurtOrRespawnPlayer();
+              return;
+            }
           }
         }
       }
 
-      // Respawn if fallen into a chasm
       if (player.y > getBaseGroundY() + 900) {
-        playSfx("death");
-        state.shake = 9;
-        state.combo = 1;
-        respawnPlayer(false);
+        hurtOrRespawnPlayer();
         return;
       }
 
-      // Record Ghost & Personal Best Distance
+      // Check Objective Completion
+      const curMission = MISSIONS[state.missionIdx];
+      if (curMission && curMission.check()) {
+        state.score += curMission.reward;
+        playSfx("checkpoint");
+        showToast(`Objective Complete! +${curMission.reward} pts`);
+        state.missionIdx++;
+      }
+
+      // Personal Best & Ghost
       const currentTile = Math.round(player.x / TILE_W);
       if (currentTile > state.bestMeters) {
         state.bestMeters = currentTile;
@@ -1292,23 +1467,20 @@
       state.ghostSampleTimer += dt;
       if (state.ghostSampleTimer >= 0.06) {
         state.ghostSampleTimer = 0;
-        state.currentRunGhost.push({ t: state.runTime, x: player.x, y: player.y });
+        state.currentRunGhost.push({ x: player.x, y: player.y });
         if (state.currentRunGhost.length > 1500) state.currentRunGhost.shift();
       }
 
-      // Smooth camera tracking with velocity lookahead
       const camLerp = 1 - Math.exp(-9 * dt);
       const lookAheadX = player.vx * 0.24;
       const lookAheadY = player.vy * 0.08;
       camera.x += (player.x + lookAheadX - camera.x) * camLerp;
       camera.y += (player.y + lookAheadY - height * 0.08 - camera.y) * (1 - Math.exp(-6.5 * dt));
 
-      // Recover squash/stretch
       const spring = 1 - Math.exp(-18 * dt);
       player.scaleX += (1 - player.scaleX) * spring;
       player.scaleY += (1 - player.scaleY) * spring;
 
-      // Trail recording
       const currentSpeed = Math.hypot(player.vx, player.vy);
       if (currentSpeed > 60) {
         player.trail.push({ x: player.x, y: player.y, alpha: 0.24 });
@@ -1319,7 +1491,6 @@
         if (player.trail[i].alpha <= 0) player.trail.splice(i, 1);
       }
 
-      // Update Particles & Floating Popups
       for (let i = state.particles.length - 1; i >= 0; i--) {
         const p = state.particles[i];
         p.x += p.vx * dt;
@@ -1337,7 +1508,8 @@
 
       const curBiome = getBiomeAtTile(currentTile);
       coordsEl.textContent = `X: ${currentTile}m  |  Best: ${state.bestMeters}m  |  Biome: ${curBiome.name}  |  Seed: ${cfg.seed}`;
-      statsEl.textContent = `Orbs: ${state.orbs}  |  Combo: x${state.combo}  |  Speed: ${Math.round(currentSpeed)} u/s  |  Time: ${state.runTime.toFixed(1)}s`;
+      statsEl.textContent = `Score: ${state.score}  |  Orbs: ${state.orbs}  |  Smashed: ${state.kills}  |  Combo: x${state.combo}  |  Time: ${state.runTime.toFixed(1)}s`;
+      missionEl.textContent = curMission ? `Objective: ${curMission.label} (+${curMission.reward})` : "All Objectives Complete — Endless Freeplay!";
     }
 
     function draw(now) {
@@ -1377,7 +1549,7 @@
         ctx.stroke();
       }
 
-      // Subtle Parallax Distant Skyline Layer
+      // Distant Parallax Skyline
       ctx.save();
       ctx.translate(-camLeft * 0.35, -camTop * 0.2);
       const bgStart = Math.floor((camLeft * 0.35 - 200) / 180);
@@ -1398,7 +1570,7 @@
       const cStart = Math.floor((camLeft - 160) / CHUNK_W) - 1;
       const cEnd = Math.floor((camLeft + viewW + 160) / CHUNK_W) + 1;
 
-      // Background Architectural Pillars
+      // Background Pillars
       for (let c = cStart; c <= cEnd; c++) {
         const { decor } = getChunk(c);
         for (let i = 0; i < decor.length; i++) {
@@ -1411,7 +1583,7 @@
         }
       }
 
-      // Personal Best Distance Marker Line
+      // PB Marker
       if (state.bestMeters > 5) {
         const bestX = state.bestMeters * TILE_W;
         ctx.save();
@@ -1428,11 +1600,14 @@
         ctx.restore();
       }
 
-      // Render Visible World Chunks
+      // World Blocks, Orbs & Entities
+      const bob = Math.sin(now * 0.005) * 3;
       for (let c = cStart; c <= cEnd; c++) {
-        const { blocks, orbs } = getChunk(c);
+        const { blocks, orbs, entities } = getChunk(c);
         for (let i = 0; i < blocks.length; i++) {
           const b = blocks[i];
+          if (b.id && state.brokenIds.has(b.id)) continue;
+
           if (b.type === "ground") {
             ctx.fillStyle = b.fill || "#161a20";
             ctx.fillRect(b.x, b.y, b.w + 0.5, b.h);
@@ -1446,6 +1621,18 @@
             ctx.globalAlpha = 0.42;
             ctx.fillRect(b.x, b.y, b.w + 0.5, 2.5);
             ctx.globalAlpha = 1;
+          } else if (b.type === "breakable") {
+            ctx.fillStyle = "rgba(251, 146, 60, 0.22)";
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+            ctx.strokeStyle = "#fb923c";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(b.x, b.y, b.w, b.h);
+            // Crack lines
+            ctx.beginPath();
+            ctx.moveTo(b.x + 6, b.y + 12);
+            ctx.lineTo(b.x + b.w * 0.5, b.y + b.h * 0.45);
+            ctx.lineTo(b.x + b.w - 6, b.y + b.h - 14);
+            ctx.stroke();
           } else if (b.type === "bounce") {
             ctx.fillStyle = "rgba(94, 242, 184, 0.24)";
             ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -1473,8 +1660,7 @@
           }
         }
 
-        // Render Collectible Orbs
-        const bob = Math.sin(now * 0.005) * 3;
+        // Orbs
         for (let i = 0; i < orbs.length; i++) {
           const o = orbs[i];
           if (state.collectedOrbs.has(o.id)) continue;
@@ -1489,9 +1675,41 @@
           ctx.strokeRect(-o.r * 0.75, -o.r * 0.75, o.r * 1.5, o.r * 1.5);
           ctx.restore();
         }
+
+        // Interactive Entities
+        for (let i = 0; i < entities.length; i++) {
+          const ent = entities[i];
+          if (state.brokenIds.has(ent.id)) continue;
+
+          if (ent.type === "ring") {
+            ctx.strokeStyle = ent.cooldown > 0 ? "rgba(56, 189, 248, 0.25)" : "#38bdf8";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(ent.x, ent.y, ent.r, 0, Math.PI * 2);
+            ctx.stroke();
+          } else if (ent.type === "sentry") {
+            const eHalf = ent.size / 2;
+            ctx.fillStyle = "#f43f5e";
+            ctx.fillRect(ent.x - eHalf, ent.y - eHalf, ent.size, ent.size);
+            ctx.fillStyle = "#0d0f12";
+            ctx.fillRect(ent.x - 8, ent.y - 5, 16, 4);
+          } else if (ent.type === "spikes") {
+            ctx.fillStyle = "#fda4af";
+            const count = 3;
+            const sw = ent.w / count;
+            for (let s = 0; s < count; s++) {
+              const sx = ent.x + s * sw;
+              ctx.beginPath();
+              ctx.moveTo(sx, ent.y + ent.h);
+              ctx.lineTo(sx + sw * 0.5, ent.y);
+              ctx.lineTo(sx + sw, ent.y + ent.h);
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+        }
       }
 
-      // Custom Checkpoint Flag Marker
       if (state.checkpoint) {
         ctx.fillStyle = "rgba(56, 189, 248, 0.35)";
         ctx.fillRect(state.checkpoint.x - 1, state.checkpoint.y - 24, 2, 42);
@@ -1499,7 +1717,6 @@
         ctx.fillRect(state.checkpoint.x + 1, state.checkpoint.y - 24, 12, 8);
       }
 
-      // Best-Run Ghost Replay
       if (cfg.showGhost && state.bestRunGhost.length > 1) {
         const gIdx = Math.min(state.bestRunGhost.length - 1, Math.floor(state.runTime / 0.06));
         const g = state.bestRunGhost[gIdx];
@@ -1510,7 +1727,6 @@
         }
       }
 
-      // Motion Trail
       for (let i = 0; i < player.trail.length; i++) {
         const t = player.trail[i];
         const ratio = (i + 1) / player.trail.length;
@@ -1519,7 +1735,6 @@
         ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s);
       }
 
-      // Particles
       for (let i = 0; i < state.particles.length; i++) {
         const p = state.particles[i];
         ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
@@ -1528,7 +1743,6 @@
       }
       ctx.globalAlpha = 1;
 
-      // Floating Score Popups
       ctx.font = "bold 11px monospace";
       ctx.textAlign = "center";
       for (let i = 0; i < state.popups.length; i++) {
@@ -1545,15 +1759,15 @@
       ctx.translate(player.x, player.y + cfg.size / 2);
       ctx.scale(player.scaleX, player.scaleY);
 
-      if (player.dashFlash > 0) {
-        ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
-        ctx.shadowBlur = 18 * player.dashFlash;
+      if (player.dashActiveTimer > 0) {
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-cfg.size / 2 - 3, -cfg.size - 3, cfg.size + 6, cfg.size + 6);
       }
 
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(-cfg.size / 2, -cfg.size, cfg.size, cfg.size);
 
-      // Subtle directional eye-bar + double-jump charge indicator
       ctx.fillStyle = "#0d0f12";
       const eyeOffset = player.facing * 5;
       ctx.fillRect(eyeOffset - 3, -cfg.size * 0.65, 6, 4);
