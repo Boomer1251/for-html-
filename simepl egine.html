@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2D HTML5 Engine + Voxel Sand & Fixed Bounce Pads</title>
+  <title>2D HTML5 Engine + Dynamic Voxel Sand & Fixed Bounce Pads</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
     body {
@@ -222,42 +222,119 @@
     }
 
     // ==========================================
-    // 5. VOXEL SAND SIMULATION SYSTEM
+    // 5. SPARSE INFINITE VOXEL SAND SYSTEM
     // ==========================================
     class SandSystem extends Entity {
       constructor(cellSize = 4) {
         super(0, 0, 0, 0, '#f4d06f');
         this.cellSize = cellSize;
-        this.cols = 400;
-        this.rows = 300;
-        // Grid stores color string or null
-        this.grid = new Array(this.cols * this.rows).fill(null);
-        this.offsetX = -800;
-        this.offsetY = -400;
+        // Key: "c,r", Value: { c, r, color, vx, vy }
+        this.grains = new Map();
         this.solid = false;
         this.static = true;
         this.removable = false;
+        this.maxY = 1400; // Void floor limit
       }
 
-      worldToGrid(wx, wy) {
+      key(c, r) { return `${c},${r}`; }
+
+      worldToCell(wx, wy) {
         return {
-          c: Math.floor((wx - this.offsetX) / this.cellSize),
-          r: Math.floor((wy - this.offsetY) / this.cellSize)
+          c: Math.floor(wx / this.cellSize),
+          r: Math.floor(wy / this.cellSize)
         };
       }
 
-      addSand(wx, wy, radius = 2) {
-        const center = this.worldToGrid(wx, wy);
+      addSand(wx, wy, radius = 3) {
+        const center = this.worldToCell(wx, wy);
+        for (let dr = -radius; dr <= radius; dr++) {
+          for (let dc = -radius; dc <= radius; dc++) {
+            if (Math.hypot(dr, dc) <= radius && Math.random() < 0.85) {
+              const c = center.c + dc;
+              const r = center.r + dr;
+              const k = this.key(c, r);
+              if (!this.grains.has(k)) {
+                const shade = Math.floor(Math.random() * 28);
+                this.grains.set(k, {
+                  c, r,
+                  color: `rgb(${240 + shade}, ${200 + shade}, ${105 + shade})`,
+                  vx: 0
+                });
+              }
+            }
+          }
+        }
+      }
+
+      erase(wx, wy, radius = 5) {
+        const center = this.worldToCell(wx, wy);
         for (let dr = -radius; dr <= radius; dr++) {
           for (let dc = -radius; dc <= radius; dc++) {
             if (Math.hypot(dr, dc) <= radius) {
-              const c = center.c + dc;
-              const r = center.r + dr;
-              if (c >= 0 && c < this.cols && r >= 0 && r < this.rows) {
-                const idx = r * this.cols + c;
-                if (!this.grid[idx] && Math.random() < 0.85) {
-                  const shade = Math.floor(Math.random() * 30);
-                  this.grid[idx] = `rgb(${244 + shade}, ${208 + shade}, ${111 + shade})`;
+              this.grains.delete(this.key(center.c + dc, center.r + dr));
+            }
+          }
+        }
+      }
+
+      isCellBlocked(c, r, staticSolids) {
+        if (this.grains.has(this.key(c, r))) return true;
+        const wx = c * this.cellSize;
+        const wy = r * this.cellSize;
+        if (wy > this.maxY) return true;
+
+        for (let i = 0; i < staticSolids.length; i++) {
+          const s = staticSolids[i];
+          if (wx < s.pos.x + s.size.x && wx + this.cellSize > s.pos.x &&
+              wy < s.pos.y + s.size.y && wy + this.cellSize > s.pos.y) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // Displace sand grains when dynamic entities walk/fall through them
+      interactWithDynamics(dynamics, staticSolids) {
+        for (const ent of dynamics) {
+          const minC = Math.floor(ent.pos.x / this.cellSize) - 1;
+          const maxC = Math.floor((ent.pos.x + ent.size.x) / this.cellSize) + 1;
+          const minR = Math.floor(ent.pos.y / this.cellSize) - 1;
+          const maxR = Math.floor((ent.pos.y + ent.size.y) / this.cellSize) + 1;
+
+          for (let r = minR; r <= maxR; r++) {
+            for (let c = minC; c <= maxC; c++) {
+              const k = this.key(c, r);
+              const grain = this.grains.get(k);
+              if (!grain) continue;
+
+              const wx = c * this.cellSize;
+              const wy = r * this.cellSize;
+
+              // Check overlap with entity AABB
+              if (wx < ent.pos.x + ent.size.x && wx + this.cellSize > ent.pos.x &&
+                  wy < ent.pos.y + ent.size.y && wy + this.cellSize > ent.pos.y) {
+
+                // Determine push direction based on entity movement or side of body
+                const entCenterX = ent.pos.x + ent.size.x / 2;
+                const pushDir = ent.vel.x !== 0 ? Math.sign(ent.vel.x) : (wx >= entCenterX ? 1 : -1);
+
+                // Kick grain outward and upward like splashing/kicking sand
+                const targetC = c + pushDir * (1 + Math.floor(Math.random() * 2));
+                const targetR = r - (1 + Math.floor(Math.random() * 2));
+
+                this.grains.delete(k);
+                if (!this.isCellBlocked(targetC, targetR, staticSolids)) {
+                  grain.c = targetC;
+                  grain.r = targetR;
+                  grain.vx = pushDir * (1 + Math.floor(Math.random() * 2));
+                  this.grains.set(this.key(targetC, targetR), grain);
+                } else {
+                  // Fallback: pop straight above entity head if tight
+                  const topR = Math.floor(ent.pos.y / this.cellSize) - 1;
+                  if (!this.isCellBlocked(c, topR, staticSolids)) {
+                    grain.r = topR;
+                    this.grains.set(this.key(c, topR), grain);
+                  }
                 }
               }
             }
@@ -265,91 +342,66 @@
         }
       }
 
-      erase(wx, wy, radius = 3) {
-        const center = this.worldToGrid(wx, wy);
-        for (let dr = -radius; dr <= radius; dr++) {
-          for (let dc = -radius; dc <= radius; dc++) {
-            const c = center.c + dc;
-            const r = center.r + dr;
-            if (c >= 0 && c < this.cols && r >= 0 && r < this.rows) {
-              this.grid[r * this.cols + c] = null;
-            }
-          }
-        }
-      }
-
-      isSolidAt(c, r, engine) {
-        if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return true;
-        if (this.grid[r * this.cols + c] !== null) return true;
-
-        // Check collision against engine static entities/platforms
-        const wx = this.offsetX + c * this.cellSize;
-        const wy = this.offsetY + r * this.cellSize;
-        const testBox = { pos: new Vec2(wx, wy), size: new Vec2(this.cellSize, this.cellSize) };
-
-        for (const ent of engine.entities) {
-          if (ent === this || ent.destroyed) continue;
-          if (ent.solid && engine.aabb(testBox, ent)) return true;
-        }
-        return false;
-      }
-
       update(dt, engine) {
-        // Sand cellular automata pass (bottom to top for proper gravity settling)
-        for (let r = this.rows - 2; r >= 0; r--) {
-          // Randomize horizontal scan direction to prevent bias
-          const leftToRight = Math.random() < 0.5;
-          for (let i = 0; i < this.cols; i++) {
-            const c = leftToRight ? i : (this.cols - 1 - i);
-            const idx = r * this.cols + c;
-            const color = this.grid[idx];
-            if (!color) continue;
+        if (this.grains.size === 0) return;
 
-            const belowIdx = (r + 1) * this.cols + c;
-            const downLeftIdx = (r + 1) * this.cols + (c - 1);
-            const downRightIdx = (r + 1) * this.cols + (c + 1);
+        const staticSolids = engine.entities.filter(e => e.solid && e.static && !e.destroyed);
+        const dynamics = engine.entities.filter(e => !e.static && !e.destroyed);
 
-            // Move straight down if empty
-            if (!this.isSolidAt(c, r + 1, engine)) {
-              this.grid[idx] = null;
-              this.grid[belowIdx] = color;
-            } 
-            // Fall diagonal down-left or down-right
-            else {
-              const leftFree = c > 0 && !this.isSolidAt(c - 1, r + 1, engine);
-              const rightFree = c < this.cols - 1 && !this.isSolidAt(c + 1, r + 1, engine);
+        // Sort bottom-to-top so falling grains don't block grains above them in the same frame
+        const sortedGrains = Array.from(this.grains.values()).sort((a, b) => b.r - a.r);
 
-              if (leftFree && rightFree) {
-                const targetIdx = Math.random() < 0.5 ? downLeftIdx : downRightIdx;
-                this.grid[idx] = null;
-                this.grid[targetIdx] = color;
-              } else if (leftFree) {
-                this.grid[idx] = null;
-                this.grid[downLeftIdx] = color;
-              } else if (rightFree) {
-                this.grid[idx] = null;
-                this.grid[downRightIdx] = color;
-              }
+        for (const g of sortedGrains) {
+          // Verify grain wasn't already overwritten
+          if (this.grains.get(this.key(g.c, g.r)) !== g) continue;
+
+          if (g.r * this.cellSize > this.maxY) {
+            this.grains.delete(this.key(g.c, g.r));
+            continue;
+          }
+
+          let nextC = g.c;
+          let nextR = g.r;
+
+          // Apply horizontal kick momentum if kicked by player/crate
+          if (g.vx !== 0) {
+            const step = Math.sign(g.vx);
+            if (!this.isCellBlocked(nextC + step, nextR, staticSolids)) {
+              nextC += step;
+            }
+            g.vx -= step;
+          }
+
+          // Gravity: Straight down -> Diagonal Left/Right
+          if (!this.isCellBlocked(nextC, nextR + 1, staticSolids)) {
+            nextR += 1;
+          } else {
+            const dir = Math.random() < 0.5 ? -1 : 1;
+            if (!this.isCellBlocked(nextC + dir, nextR + 1, staticSolids)) {
+              nextC += dir;
+              nextR += 1;
+            } else if (!this.isCellBlocked(nextC - dir, nextR + 1, staticSolids)) {
+              nextC -= dir;
+              nextR += 1;
             }
           }
+
+          if (nextC !== g.c || nextR !== g.r) {
+            this.grains.delete(this.key(g.c, g.r));
+            g.c = nextC;
+            g.r = nextR;
+            this.grains.set(this.key(nextC, nextR), g);
+          }
         }
+
+        // Dynamic entities kick & displace sand grains
+        this.interactWithDynamics(dynamics, staticSolids);
       }
 
       render(ctx) {
-        ctx.fillStyle = '#f4d06f';
-        for (let r = 0; r < this.rows; r++) {
-          for (let c = 0; c < this.cols; c++) {
-            const color = this.grid[r * this.cols + c];
-            if (color) {
-              ctx.fillStyle = color;
-              ctx.fillRect(
-                this.offsetX + c * this.cellSize,
-                this.offsetY + r * this.cellSize,
-                this.cellSize,
-                this.cellSize
-              );
-            }
-          }
+        for (const g of this.grains.values()) {
+          ctx.fillStyle = g.color;
+          ctx.fillRect(g.c * this.cellSize, g.r * this.cellSize, this.cellSize, this.cellSize);
         }
       }
     }
@@ -401,80 +453,63 @@
           ent.vel.x += ent.acc.x * dt;
           ent.vel.y += ent.acc.y * dt;
 
-          // Helper check for overlap with sand voxels
-          const collidesWithSand = (box) => {
-            if (!sandSys) return false;
-            const startC = Math.floor((box.pos.x - sandSys.offsetX) / sandSys.cellSize);
-            const endC = Math.floor((box.pos.x + box.size.x - sandSys.offsetX) / sandSys.cellSize);
-            const startR = Math.floor((box.pos.y - sandSys.offsetY) / sandSys.cellSize);
-            const endR = Math.floor((box.pos.y + box.size.y - sandSys.offsetY) / sandSys.cellSize);
-            
-            for (let r = startR; r <= endR; r++) {
-              for (let c = startC; c <= endC; c++) {
-                if (c >= 0 && c < sandSys.cols && r >= 0 && r < sandSys.rows) {
-                  if (sandSys.grid[r * sandSys.cols + c] !== null) {
-                    const testBox = {
-                      pos: new Vec2(sandSys.offsetX + c * sandSys.cellSize, sandSys.offsetY + r * sandSys.cellSize),
-                      size: new Vec2(sandSys.cellSize, sandSys.cellSize)
-                    };
-                    if (this.aabb(box, testBox)) return true;
-                  }
-                }
-              }
+          // Soft granular drag when wading through sand (never traps you)
+          if (sandSys && sandSys.grains.size > 0) {
+            const footC = Math.floor((ent.pos.x + ent.size.x / 2) / sandSys.cellSize);
+            const footR = Math.floor((ent.pos.y + ent.size.y) / sandSys.cellSize);
+            const bodyR = Math.floor((ent.pos.y + ent.size.y * 0.7) / sandSys.cellSize);
+
+            // Allow jumping off packed sand piles
+            if (sandSys.grains.has(sandSys.key(footC, footR))) {
+              ent.grounded = true;
             }
-            return false;
-          };
+            // Slight wading resistance instead of locking movement
+            if (sandSys.grains.has(sandSys.key(footC, bodyR))) {
+              ent.vel.x *= 0.88;
+            }
+          }
 
           // Move & Resolve X
           ent.pos.x += ent.vel.x * dt;
-          let hitSandX = collidesWithSand(ent);
-          if (hitSandX) {
-            if (ent.vel.x > 0) ent.pos.x -= ent.vel.x * dt;
-            else if (ent.vel.x < 0) ent.pos.x -= ent.vel.x * dt;
-            ent.vel.x = 0;
-          }
-          for (const other of solids) {
-            if (ent === other || other.destroyed) continue;
-            if (this.aabb(ent, other)) {
-              if (ent.vel.x > 0) {
-                ent.pos.x = other.pos.x - ent.size.x;
-                ent.onCollide(other, 'right', this);
-                other.onCollide(ent, 'left', this);
-              } else if (ent.vel.x < 0) {
-                ent.pos.x = other.pos.x + other.size.x;
-                ent.onCollide(other, 'left', this);
-                other.onCollide(ent, 'right', this);
+          if (ent.solid) {
+            for (const other of solids) {
+              if (ent === other || other.destroyed) continue;
+              if (this.aabb(ent, other)) {
+                if (ent.vel.x > 0) {
+                  ent.pos.x = other.pos.x - ent.size.x;
+                  ent.vel.x = 0;
+                  ent.onCollide(other, 'right', this);
+                  other.onCollide(ent, 'left', this);
+                } else if (ent.vel.x < 0) {
+                  ent.pos.x = other.pos.x + other.size.x;
+                  ent.vel.x = 0;
+                  ent.onCollide(other, 'left', this);
+                  other.onCollide(ent, 'right', this);
+                }
               }
-              ent.vel.x = 0;
             }
           }
 
           // Move & Resolve Y
           ent.pos.y += ent.vel.y * dt;
-          let hitSandY = collidesWithSand(ent);
-          if (hitSandY) {
-            if (ent.vel.y > 0) {
-              ent.pos.y -= ent.vel.y * dt;
-              ent.grounded = true;
-            } else if (ent.vel.y < 0) {
-              ent.pos.y -= ent.vel.y * dt;
-            }
-            ent.vel.y = 0;
-          }
-          for (const other of solids) {
-            if (ent === other || other.destroyed) continue;
-            if (this.aabb(ent, other)) {
-              if (ent.vel.y > 0) {
-                ent.pos.y = other.pos.y - ent.size.y;
-                ent.grounded = true;
-                ent.onCollide(other, 'bottom', this);
-                other.onCollide(ent, 'top', this);
-              } else if (ent.vel.y < 0) {
-                ent.pos.y = other.pos.y + other.size.y;
-                ent.onCollide(other, 'top', this);
-                other.onCollide(ent, 'bottom', this);
+          if (ent.solid) {
+            for (const other of solids) {
+              if (ent === other || other.destroyed) continue;
+              if (this.aabb(ent, other)) {
+                if (ent.vel.y > 0) {
+                  ent.pos.y = other.pos.y - ent.size.y;
+                  ent.grounded = true;
+                  ent.vel.y = 0;
+                  // Fire collision callbacks AFTER zeroing velocity so bounce pads can override vel.y!
+                  ent.onCollide(other, 'bottom', this);
+                  other.onCollide(ent, 'top', this);
+                } else if (ent.vel.y < 0) {
+                  ent.pos.y = other.pos.y + other.size.y;
+                  ent.vel.y = 0;
+                  ent.onCollide(other, 'top', this);
+                  other.onCollide(ent, 'bottom', this);
+                }
               }
-              ent.vel.y = 0;
             }
           }
         }
@@ -505,9 +540,10 @@
           this.camera.reset(this.ctx);
 
           if (this.debug) {
+            const sandCount = this.entities.find(e => e instanceof SandSystem)?.grains.size || 0;
             this.ctx.fillStyle = '#00ff88';
             this.ctx.font = '13px monospace';
-            this.ctx.fillText(`FPS: ${this.fps} | Entities: ${this.entities.length}${this.paused ? ' [PAUSED]' : ''}`, 12, 22);
+            this.ctx.fillText(`FPS: ${this.fps} | Entities: ${this.entities.length} | Sand Grains: ${sandCount}${this.paused ? ' [PAUSED]' : ''}`, 12, 22);
           }
 
           this.input.clearFrame();
@@ -585,19 +621,25 @@
       constructor(x, y) {
         super(x, y, 64, 16, '#00ff88');
         this.static = true;
+        this.springAnim = 0;
       }
-      onCollide(other, side, engine) {
+      onCollide(other, side) {
         if (side === 'top' && !other.static) {
-          other.vel.y = -1050; // High bounce velocity
+          other.vel.y = -1050;
           other.grounded = false;
-          // Instantly pop the entity slightly above the pad to prevent sticking/collision locking
-          other.pos.y = this.pos.y - other.size.y - 2;
+          other.pos.y = this.pos.y - other.size.y - 1;
+          this.springAnim = 1;
         }
       }
+      update(dt) {
+        if (this.springAnim > 0) this.springAnim = Math.max(0, this.springAnim - dt * 5);
+      }
       render(ctx) {
-        super.render(ctx);
-        ctx.fillStyle = '#ffffffaa';
-        ctx.fillRect(Math.round(this.pos.x) + 8, Math.round(this.pos.y) + 4, this.size.x - 16, 4);
+        const lift = Math.round(this.springAnim * 6);
+        ctx.fillStyle = this.color;
+        ctx.fillRect(Math.round(this.pos.x), Math.round(this.pos.y) - lift, this.size.x, this.size.y + lift);
+        ctx.fillStyle = '#ffffffcc';
+        ctx.fillRect(Math.round(this.pos.x) + 6, Math.round(this.pos.y) + 3 - lift, this.size.x - 12, 4);
       }
     }
 
@@ -668,7 +710,7 @@
 
         document.getElementById('btn-clear').addEventListener('click', () => {
           this.engine.entities.forEach(e => { if (e.removable) e.destroyed = true; });
-          this.sandSystem.grid.fill(null);
+          this.sandSystem.grains.clear();
         });
 
         window.addEventListener('keydown', e => {
@@ -698,7 +740,6 @@
         const input = this.engine.input;
         const worldMouse = this.engine.camera.screenToWorld(input.mouse.pos);
 
-        // Left Click / Drag: Place Entity or Pour Sand
         if (input.mouse.down || input.mouse.clicked) {
           if (this.selectedTool === 'sand') {
             this.sandSystem.addSand(worldMouse.x, worldMouse.y, 4);
@@ -711,11 +752,8 @@
           }
         }
 
-        // Right Click / Drag: Erase Entity or Sand
         if (input.mouse.rightDown) {
-          if (this.selectedTool === 'sand' || Math.random() < 0.5) {
-            this.sandSystem.erase(worldMouse.x, worldMouse.y, 6);
-          }
+          this.sandSystem.erase(worldMouse.x, worldMouse.y, 6);
           for (let i = this.engine.entities.length - 1; i >= 0; i--) {
             const ent = this.engine.entities[i];
             if (ent.removable && ent.containsPoint(worldMouse)) {
