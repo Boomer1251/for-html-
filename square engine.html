@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Square - Procedural Infinite World</title>
+  <title>Square</title>
   <style>
     * {
       margin: 0;
@@ -16,7 +16,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #080a0e;
+      background: #0d0f12;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       color: #c9d1d9;
     }
@@ -35,7 +35,6 @@
       line-height: 1.5;
       color: rgba(255, 255, 255, 0.45);
       pointer-events: none;
-      z-index: 10;
     }
 
     #coords {
@@ -47,15 +46,14 @@
       position: fixed;
       top: 14px;
       right: 14px;
-      width: 265px;
-      background: rgba(14, 17, 23, 0.88);
-      backdrop-filter: blur(12px);
+      width: 255px;
+      background: rgba(18, 21, 27, 0.88);
+      backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       padding: 12px;
       font-size: 12px;
       display: none;
-      z-index: 10;
     }
 
     #panel.open {
@@ -111,17 +109,21 @@
 
   <div id="hud">
     A / D or Arrows: Move &nbsp;|&nbsp; W / Up / Space: Jump &nbsp;|&nbsp; Shift: Dash &nbsp;|&nbsp; Tab: Tuner &nbsp;|&nbsp; R: Respawn &nbsp;|&nbsp; N: New Seed
-    <div id="coords">X: 0m &nbsp;|&nbsp; Biome: Plains &nbsp;|&nbsp; Seed: 0</div>
+    <div id="coords">X: 0 &nbsp;|&nbsp; Seed: 0</div>
   </div>
 
   <div id="panel">
     <div class="row">
-      <div class="label-row"><span>World Scale</span><span id="v-scale">1.0x</span></div>
-      <input type="range" id="s-scale" min="0.4" max="2.5" step="0.1" value="1.0" />
+      <div class="label-row"><span>Terrain Roughness</span><span id="v-rough">110</span></div>
+      <input type="range" id="s-rough" min="0" max="260" step="10" value="110" />
     </div>
     <div class="row">
-      <div class="label-row"><span>Cavity Frequency</span><span id="v-cave">0.35</span></div>
-      <input type="range" id="s-cave" min="0.1" max="0.8" step="0.05" value="0.35" />
+      <div class="label-row"><span>Platform Density</span><span id="v-plat">0.55</span></div>
+      <input type="range" id="s-plat" min="0" max="1" step="0.05" value="0.55" />
+    </div>
+    <div class="row">
+      <div class="label-row"><span>Gap Frequency</span><span id="v-gap">0.15</span></div>
+      <input type="range" id="s-gap" min="0" max="0.6" step="0.05" value="0.15" />
     </div>
     <div class="row">
       <div class="label-row"><span>Gravity</span><span id="v-gravity">2400</span></div>
@@ -168,8 +170,9 @@
 
     const cfg = {
       seed: Math.floor(Math.random() * 999999) + 1,
-      worldScale: 1.0,
-      caveFreq: 0.35,
+      roughness: 110,
+      platformDensity: 0.55,
+      gapChance: 0.15,
       gravity: 2400,
       jumpForce: 860,
       maxSpeed: 480,
@@ -182,125 +185,119 @@
       showGrid: true
     };
 
-    // Advanced 2D Simplex/Perplex Noise & Biome Generator
-    function hash22(pX, pY) {
-      let n = Math.sin(pX * 127.1 + pY * 311.7 + cfg.seed * 73.1) * 43758.5453123;
-      return n - Math.floor(n);
+    // Deterministic Hashing & 1D Value Noise
+    function hash(n) {
+      let x = Math.sin(n * 127.1 + cfg.seed * 311.7) * 43758.5453123;
+      return x - Math.floor(x);
     }
 
-    function smoothNoise2D(x, y) {
-      const iX = Math.floor(x);
-      const iY = Math.floor(y);
-      const fX = x - iX;
-      const fY = y - iY;
-
-      const uX = fX * fX * (3 - 2 * fX);
-      const uY = fY * fY * (3 - 2 * fY);
-
-      const bottom = hash22(iX, iY) * (1 - uX) + hash22(iX + 1, iY) * uX;
-      const top = hash22(iX, iY + 1) * (1 - uX) + hash22(iX + 1, iY + 1) * uX;
-
-      return bottom * (1 - uY) + top * uY;
+    function smoothNoise(x) {
+      const i = Math.floor(x);
+      const f = x - i;
+      const u = f * f * (3 - 2 * f);
+      return hash(i) * (1 - u) + hash(i + 1) * u;
     }
 
-    function fbm2D(x, y, octaves = 4) {
+    function fbm(x) {
       let val = 0;
-      let amp = 0.5;
+      let amp = 0.55;
       let freq = 1;
-      for (let o = 0; o < octaves; o++) {
-        val += smoothNoise2D(x * freq, y * freq) * amp;
-        freq *= 2.02;
-        amp *= 0.5;
+      for (let o = 0; o < 3; o++) {
+        val += smoothNoise(x * freq) * amp;
+        freq *= 2.05;
+        amp *= 0.45;
       }
-      return val;
+      return val; // ~0..1
     }
 
-    // Grid-based destructive 16x16 block world (True 67x upgrade: caves, overhangs, floating islands, pillars, and distinct biomes)
-    const BLOCK_SIZE = 32;
-    const CHUNK_SIZE = 16; // 16x16 blocks per chunk
-    const CHUNK_WORLD_W = BLOCK_SIZE * CHUNK_SIZE;
+    // Chunked World Generation
+    const TILE_W = 64;
+    const CHUNK_TILES = 16;
+    const CHUNK_W = TILE_W * CHUNK_TILES;
     const chunks = new Map();
 
     function getBaseGroundY() {
-      return height * 0.65;
+      return height * 0.72;
     }
 
-    function getBiome(wx) {
-      const bNoise = fbm2D(wx * 0.00015 + cfg.seed * 0.01, 0.5, 2);
-      if (bNoise < 0.3) return { name: "Canyons", color: "#1c1821", accent: "#d97706" };
-      if (bNoise < 0.65) return { name: "Plains", color: "#161a20", accent: "#38bdf8" };
-      return { name: "Caverns", color: "#101622", accent: "#a855f7" };
-    }
-
-    function generateChunk(cx, cy) {
-      const grid = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE); // 0 = empty, 1 = solid
-      const worldStartX = cx * CHUNK_WORLD_W;
-      const worldStartY = cy * CHUNK_WORLD_W;
+    function generateChunk(chunkIndex) {
+      const blocks = [];
       const baseGroundY = getBaseGroundY();
+      const startTile = chunkIndex * CHUNK_TILES;
 
-      for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-        const wx = worldStartX + lx * BLOCK_SIZE;
-        const normalizedX = wx * 0.0025 * cfg.worldScale;
+      let prevSurfaceY = null;
 
-        // Multi-layered terrain height
-        const terrainHeight = baseGroundY + (fbm2D(normalizedX, 1.3, 3) - 0.5) * 480 * cfg.worldScale;
-        const surfaceBlockY = Math.floor(terrainHeight / BLOCK_SIZE);
+      for (let i = 0; i < CHUNK_TILES; i++) {
+        const tx = startTile + i;
+        const wx = tx * TILE_W;
 
-        for (let ly = 0; ly < CHUNK_SIZE; ly++) {
-          const wy = worldStartY + ly * BLOCK_SIZE;
-          const blockYIndex = Math.floor(wy / BLOCK_SIZE);
+        // Keep spawn area (around x = 0) safe and flat
+        const nearSpawn = Math.abs(tx) <= 3;
 
-          // Near spawn safety bubble
-          const nearSpawn = Math.abs(wx) < 160 && Math.abs(wy - baseGroundY) < 180;
+        // Gap check
+        const gapRoll = hash(tx * 7.3 + 19);
+        const isGap = !nearSpawn && gapRoll < cfg.gapChance && i > 0 && i < CHUNK_TILES - 1;
 
-          if (nearSpawn) {
-            if (blockYIndex >= Math.floor(baseGroundY / BLOCK_SIZE)) {
-              grid[ly * CHUNK_SIZE + lx] = 1;
-            }
-            continue;
-          }
+        if (isGap) {
+          prevSurfaceY = null;
+          continue;
+        }
 
-          if (blockYIndex >= surfaceBlockY) {
-            // Cave carving using 2D noise threshold
-            const caveVal = fbm2D(wx * 0.008 * cfg.worldScale, wy * 0.008 * cfg.worldScale, 3);
-            const depthIntoGround = blockYIndex - surfaceBlockY;
+        // Terrain elevation
+        const n = fbm(tx * 0.14);
+        const offset = nearSpawn ? 0 : (n - 0.5) * 2 * cfg.roughness;
+        const surfaceY = Math.round((baseGroundY + offset) / 16) * 16;
 
-            // Open up caves below surface, keep surface intact
-            if (depthIntoGround > 3 && caveVal > (0.52 - cfg.caveFreq * 0.15)) {
-              grid[ly * CHUNK_SIZE + lx] = 0; // Cave air
-            } else {
-              grid[ly * CHUNK_SIZE + lx] = 1; // Solid
-            }
-          } else {
-            // Floating islands / arch pillars high up in the sky
-            const islandNoise = fbm2D(normalizedX * 1.4, wy * 0.004, 3);
-            if (wy < baseGroundY - 220 && islandNoise > 0.68 && islandNoise < 0.78) {
-              grid[ly * CHUNK_SIZE + lx] = 1;
-            }
+        blocks.push({
+          x: wx,
+          y: surfaceY,
+          w: TILE_W,
+          h: 2000,
+          type: "ground"
+        });
+
+        // Floating platforms
+        if (!nearSpawn && i % 2 === 0) {
+          const platRoll = hash(tx * 13.7 + 91);
+          if (platRoll < cfg.platformDensity) {
+            const tier = hash(tx * 3.1 + 41) > 0.45 ? 1 : 2;
+            const platY = surfaceY - (115 * tier + Math.round(hash(tx * 5.9) * 32));
+            const platSpan = hash(tx * 17.3) > 0.5 ? 2 : 3;
+
+            blocks.push({
+              x: wx,
+              y: platY,
+              w: TILE_W * platSpan,
+              h: 18,
+              type: "platform"
+            });
           }
         }
+
+        prevSurfaceY = surfaceY;
       }
-      return grid;
+
+      return blocks;
     }
 
-    function getChunk(cx, cy) {
-      const key = `${cx},${cy}`;
-      if (!chunks.has(key)) {
-        chunks.set(key, generateChunk(cx, cy));
+    function getChunk(chunkIndex) {
+      if (!chunks.has(chunkIndex)) {
+        chunks.set(chunkIndex, generateChunk(chunkIndex));
       }
-      return chunks.get(key);
+      return chunks.get(chunkIndex);
     }
 
-    function getBlock(wx, wy) {
-      const cx = Math.floor(wx / CHUNK_WORLD_W);
-      const cy = Math.floor(wy / CHUNK_WORLD_W);
-      const chunk = getChunk(cx, cy);
-
-      const localX = Math.floor((wx - cx * CHUNK_WORLD_W) / BLOCK_SIZE);
-      const localY = Math.floor((wy - cy * CHUNK_WORLD_W) / BLOCK_SIZE);
-
-      if (localX < 0 || localX >= CHUNK_SIZE || localY < 0 || localY >= CHUNK_SIZE) return 0;
-      return chunk[localY * CHUNK_SIZE + localX];
+    function getNearbySolids(minX, maxX) {
+      const cStart = Math.floor(minX / CHUNK_W) - 1;
+      const cEnd = Math.floor(maxX / CHUNK_W) + 1;
+      const list = [];
+      for (let c = cStart; c <= cEnd; c++) {
+        const blocks = getChunk(c);
+        for (let i = 0; i < blocks.length; i++) {
+          list.push(blocks[i]);
+        }
+      }
+      return list;
     }
 
     function rebuildWorld() {
@@ -310,7 +307,7 @@
     // Player State
     const player = {
       x: 0,
-      y: getBaseGroundY() - 60,
+      y: getBaseGroundY() - cfg.size / 2,
       vx: 0,
       vy: 0,
       grounded: false,
@@ -326,12 +323,12 @@
 
     const camera = {
       x: 0,
-      y: getBaseGroundY() - 100
+      y: getBaseGroundY() - height * 0.55
     };
 
     function respawnPlayer() {
       player.x = 0;
-      player.y = getBaseGroundY() - 80;
+      player.y = getBaseGroundY() - cfg.size / 2 - 4;
       player.vx = 0;
       player.vy = 0;
       player.grounded = false;
@@ -343,7 +340,7 @@
       player.scaleY = 1;
       player.trail.length = 0;
       camera.x = player.x;
-      camera.y = player.y;
+      camera.y = player.y - height * 0.1;
     }
 
     function newSeed() {
@@ -380,7 +377,7 @@
 
     window.addEventListener("keyup", (e) => {
       if ((e.code === "Space" || e.code === "KeyW" || e.code === "ArrowUp") && player.vy < -180) {
-        player.vy *= 0.5;
+        player.vy *= 0.55;
       }
       keys.delete(e.code);
     });
@@ -401,7 +398,7 @@
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
       player.scaleX = 0.74;
-      player.scaleY = 1.32;
+      player.scaleY = 1.3;
     }
 
     function triggerDash() {
@@ -410,26 +407,27 @@
       const dir = ix !== 0 ? ix : player.facing;
 
       player.vx = dir * cfg.dashSpeed;
-      player.vy = Math.min(player.vy, 0) * 0.2;
+      player.vy = Math.min(player.vy, 0) * 0.25;
       player.dashTimer = cfg.dashCooldown;
       player.dashFlash = 1;
-      player.scaleX = 1.35;
-      player.scaleY = 0.7;
+      player.scaleX = 1.32;
+      player.scaleY = 0.72;
     }
 
     // Tuner UI Bindings
-    function bindSlider(id, valId, key, formatter = (v) => v, rebuild = false) {
+    function bindSlider(id, valId, key, rebuild = false) {
       const el = document.getElementById(id);
       const out = document.getElementById(valId);
       el.addEventListener("input", () => {
         cfg[key] = Number(el.value);
-        out.textContent = formatter(cfg[key]);
+        out.textContent = cfg[key];
         if (rebuild) rebuildWorld();
       });
     }
 
-    bindSlider("s-scale", "v-scale", "worldScale", (v) => v.toFixed(1) + "x", true);
-    bindSlider("s-cave", "v-cave", "caveFreq", (v) => v.toFixed(2), true);
+    bindSlider("s-rough", "v-rough", "roughness", true);
+    bindSlider("s-plat", "v-plat", "platformDensity", true);
+    bindSlider("s-gap", "v-gap", "gapChance", true);
     bindSlider("s-gravity", "v-gravity", "gravity");
     bindSlider("s-jump", "v-jump", "jumpForce");
     bindSlider("s-speed", "v-speed", "maxSpeed");
@@ -443,75 +441,9 @@
 
     document.getElementById("btn-seed").addEventListener("click", newSeed);
 
-    // Precise AABB Sub-pixel Block Collision Resolver
-    function resolveCollisions(dt) {
-      const half = cfg.size / 2;
-
-      // Horizontal movement & collision
-      player.x += player.vx * dt;
-      let leftBox = player.x - half;
-      let rightBox = player.x + half;
-      let topBox = player.y - half;
-      let bottomBox = player.y + half;
-
-      const minX = Math.floor(leftBox / BLOCK_SIZE);
-      const maxX = Math.floor(rightBox / BLOCK_SIZE);
-      const minY = Math.floor(topBox / BLOCK_SIZE);
-      const maxY = Math.floor(bottomBox / BLOCK_SIZE);
-
-      for (let bx = minX; bx <= maxX; bx++) {
-        for (let by = minY; by <= maxY; by++) {
-          if (getBlock(bx * BLOCK_SIZE, by * BLOCK_SIZE) === 1) {
-            if (player.vx > 0) {
-              player.x = bx * BLOCK_SIZE - half;
-              player.vx = 0;
-            } else if (player.vx < 0) {
-              player.x = (bx + 1) * BLOCK_SIZE + half;
-              player.vx = 0;
-            }
-          }
-        }
-      }
-
-      // Vertical movement & collision
-      const wasGrounded = player.grounded;
-      player.grounded = false;
-      player.y += player.vy * dt;
-
-      leftBox = player.x - half;
-      rightBox = player.x + half;
-      topBox = player.y - half;
-      bottomBox = player.y + half;
-
-      const vMinX = Math.floor(leftBox / BLOCK_SIZE);
-      const vMaxX = Math.floor(rightBox / BLOCK_SIZE);
-      const vMinY = Math.floor(topBox / BLOCK_SIZE);
-      const vMaxY = Math.floor(bottomBox / BLOCK_SIZE);
-
-      for (let bx = vMinX; bx <= vMaxX; bx++) {
-        for (let by = vMinY; by <= vMaxY; by++) {
-          if (getBlock(bx * BLOCK_SIZE, by * BLOCK_SIZE) === 1) {
-            if (player.vy > 0) {
-              if (!wasGrounded && player.vy > 120) {
-                const impact = Math.min(player.vy / 1000, 1);
-                player.scaleX = 1 + 0.35 * impact;
-                player.scaleY = 1 - 0.28 * impact;
-              }
-              player.y = by * BLOCK_SIZE - half;
-              player.vy = 0;
-              player.grounded = true;
-              player.coyoteTimer = 0.12;
-            } else if (player.vy < 0) {
-              player.y = (by + 1) * BLOCK_SIZE + half;
-              player.vy = 0;
-            }
-          }
-        }
-      }
-
-      if (wasGrounded && !player.grounded && player.vy >= 0) {
-        player.coyoteTimer = 0.12;
-      }
+    // Axis-Aligned Bounding Box Collision Resolution
+    function aabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+      return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
     }
 
     let lastTime = performance.now();
@@ -525,6 +457,7 @@
       const ix = getMoveX();
       const controlMult = player.grounded ? 1 : cfg.airControl;
 
+      // Horizontal acceleration & friction
       if (ix !== 0) {
         player.vx += ix * cfg.accel * controlMult * dt;
         if (Math.abs(player.vx) > cfg.maxSpeed) {
@@ -533,7 +466,7 @@
           player.vx = sign * nextSpeed;
         }
       } else {
-        const drag = player.grounded ? cfg.friction : cfg.friction * 0.3;
+        const drag = player.grounded ? cfg.friction : cfg.friction * 0.35;
         const speed = Math.abs(player.vx);
         if (speed > 0) {
           const nextSpeed = Math.max(0, speed - drag * dt);
@@ -548,55 +481,98 @@
       // Gravity
       player.vy += cfg.gravity * dt;
 
-      // Sub-step physics resolution for rock-solid collision stability
-      resolveCollisions(dt);
+      const half = cfg.size / 2;
+      const solids = getNearbySolids(player.x - 200, player.x + 200);
 
-      // Abyss safety respawn
-      if (player.y > height * 2.2) {
+      // Step X & resolve horizontal collisions
+      player.x += player.vx * dt;
+      for (let i = 0; i < solids.length; i++) {
+        const s = solids[i];
+        if (aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, s.x, s.y, s.w, s.h)) {
+          if (player.vx > 0) {
+            player.x = s.x - half;
+            player.vx = 0;
+          } else if (player.vx < 0) {
+            player.x = s.x + s.w + half;
+            player.vx = 0;
+          }
+        }
+      }
+
+      // Step Y & resolve vertical collisions
+      const wasGrounded = player.grounded;
+      player.grounded = false;
+      player.y += player.vy * dt;
+
+      for (let i = 0; i < solids.length; i++) {
+        const s = solids[i];
+        if (aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, s.x, s.y, s.w, s.h)) {
+          if (player.vy > 0) {
+            if (!wasGrounded && player.vy > 140) {
+              const impact = Math.min(player.vy / 1200, 1);
+              player.scaleX = 1 + 0.32 * impact;
+              player.scaleY = 1 - 0.26 * impact;
+            }
+            player.y = s.y - half;
+            player.vy = 0;
+            player.grounded = true;
+            player.coyoteTimer = 0.1;
+          } else if (player.vy < 0) {
+            player.y = s.y + s.h + half;
+            player.vy = 0;
+          }
+        }
+      }
+
+      if (wasGrounded && !player.grounded && player.vy >= 0) {
+        player.coyoteTimer = 0.1;
+      }
+
+      // Respawn if fallen into a gap
+      if (player.y > getBaseGroundY() + 850) {
         respawnPlayer();
         return;
       }
 
-      // Smooth camera interpolation
-      const camLerp = 1 - Math.exp(-10 * dt);
-      const lookAhead = player.vx * 0.24;
-      camera.x += (player.x + lookAhead - camera.x) * camLerp;
-      camera.y += (player.y - height * 0.08 - camera.y) * camLerp;
+      // Smooth camera tracking
+      const camLerp = 1 - Math.exp(-9 * dt);
+      const lookAheadX = player.vx * 0.22;
+      camera.x += (player.x + lookAheadX - camera.x) * camLerp;
+      camera.y += (player.y - height * 0.08 - camera.y) * (1 - Math.exp(-6 * dt));
 
-      // Squash & stretch recovery spring
-      const spring = 1 - Math.exp(-20 * dt);
+      // Recover squash/stretch
+      const spring = 1 - Math.exp(-18 * dt);
       player.scaleX += (1 - player.scaleX) * spring;
       player.scaleY += (1 - player.scaleY) * spring;
 
-      // Motion trail
+      // Trail recording
       const currentSpeed = Math.hypot(player.vx, player.vy);
       if (currentSpeed > 60) {
-        player.trail.push({ x: player.x, y: player.y, alpha: 0.28 });
-        if (player.trail.length > 16) player.trail.shift();
+        player.trail.push({ x: player.x, y: player.y, alpha: 0.24 });
+        if (player.trail.length > 14) player.trail.shift();
       }
       for (let i = player.trail.length - 1; i >= 0; i--) {
         player.trail[i].alpha -= dt * 1.4;
         if (player.trail[i].alpha <= 0) player.trail.splice(i, 1);
       }
 
-      const biome = getBiome(player.x);
-      coordsEl.textContent = `X: ${Math.round(player.x / BLOCK_SIZE)}m  |  Biome: ${biome.name}  |  Seed: ${cfg.seed}`;
+      coordsEl.textContent = `X: ${Math.round(player.x / TILE_W)}m  |  Seed: ${cfg.seed}`;
     }
 
     function draw() {
-      ctx.fillStyle = "#080a0e";
+      ctx.fillStyle = "#0d0f12";
       ctx.fillRect(0, 0, width, height);
 
       const camLeft = camera.x - width / 2;
       const camTop = camera.y - height / 2;
 
-      // Background Grid
+      // Parallax Grid
       if (cfg.showGrid) {
         const step = 64;
         const startX = -((camLeft % step) + step) % step;
         const startY = -((camTop % step) + step) % step;
 
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.028)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.032)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let x = startX; x <= width; x += step) {
@@ -613,41 +589,23 @@
       ctx.save();
       ctx.translate(-camLeft, -camTop);
 
-      // Render Visible Chunks & Blocks
-      const startChunkX = Math.floor(camLeft / CHUNK_WORLD_W) - 1;
-      const endChunkX = Math.floor((camLeft + width) / CHUNK_WORLD_W) + 1;
-      const startChunkY = Math.floor(camTop / CHUNK_WORLD_W) - 1;
-      const endChunkY = Math.floor((camTop + height) / CHUNK_WORLD_W) + 1;
+      // Render Visible World Chunks
+      const visibleSolids = getNearbySolids(camLeft - 128, camLeft + width + 128);
+      for (let i = 0; i < visibleSolids.length; i++) {
+        const b = visibleSolids[i];
+        if (b.type === "ground") {
+          ctx.fillStyle = "#161a20";
+          ctx.fillRect(b.x, b.y, b.w + 0.5, b.h);
 
-      for (let cx = startChunkX; cx <= endChunkX; cx++) {
-        for (let cy = startChunkY; cy <= endChunkY; cy++) {
-          const chunk = getChunk(cx, cy);
-          const worldStartX = cx * CHUNK_WORLD_W;
-          const worldStartY = cy * CHUNK_WORLD_W;
+          ctx.fillStyle = "rgba(255, 255, 255, 0.24)";
+          ctx.fillRect(b.x, b.y, b.w + 0.5, 2);
+        } else {
+          ctx.fillStyle = "#1c2129";
+          ctx.fillRect(b.x, b.y, b.w, b.h);
 
-          for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-            for (let ly = 0; ly < CHUNK_SIZE; ly++) {
-              if (chunk[ly * CHUNK_SIZE + lx] === 1) {
-                const wx = worldStartX + lx * BLOCK_SIZE;
-                const wy = worldStartY + ly * BLOCK_SIZE;
-
-                // Frustum culling check
-                if (wx + BLOCK_SIZE < camLeft || wx > camLeft + width || wy + BLOCK_SIZE < camTop || wy > camTop + height) {
-                  continue;
-                }
-
-                const biome = getBiome(wx);
-                ctx.fillStyle = biome.color;
-                ctx.fillRect(wx, wy, BLOCK_SIZE + 0.5, BLOCK_SIZE + 0.5);
-
-                // Top surface highlight edge
-                if (getBlock(wx, wy - BLOCK_SIZE) === 0) {
-                  ctx.fillStyle = biome.accent;
-                  ctx.fillRect(wx, wy, BLOCK_SIZE, 3);
-                }
-              }
-            }
-          }
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(b.x, b.y, b.w, b.h);
         }
       }
 
@@ -656,7 +614,7 @@
         const t = player.trail[i];
         const ratio = (i + 1) / player.trail.length;
         const s = cfg.size * (0.65 + 0.35 * ratio);
-        ctx.fillStyle = `rgba(255, 255, 255, ${t.alpha * 0.45})`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${t.alpha * 0.42})`;
         ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s);
       }
 
@@ -666,8 +624,8 @@
       ctx.scale(player.scaleX, player.scaleY);
 
       if (player.dashFlash > 0) {
-        ctx.shadowColor = "rgba(255, 255, 255, 0.75)";
-        ctx.shadowBlur = 22 * player.dashFlash;
+        ctx.shadowColor = "rgba(255, 255, 255, 0.65)";
+        ctx.shadowBlur = 18 * player.dashFlash;
       }
 
       ctx.fillStyle = "#ffffff";
