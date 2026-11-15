@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2D HTML5 Engine + Non-Softlocking Voxel Sand & Void Cleanup</title>
+  <title>2D HTML5 Engine + Interactive Dynamic Displacement Sand</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
     body {
@@ -152,7 +152,7 @@
         canvas.addEventListener('contextmenu', e => e.preventDefault());
       }
       isDown(code) { return this.keys.has(code); }
-      isPressed(code) { return this.keysDown.has(code); }
+      isPressed(code) { return this.keysDown.hased ? this.keysDown.has(code) : this.keysDown.has(code); }
       clearFrame() {
         this.keysDown.clear();
         this.mouse.clicked = false;
@@ -222,7 +222,7 @@
     }
 
     // ==========================================
-    // 5. VOXEL SAND SIMULATION SYSTEM
+    // 5. SOLID DYNAMIC SAND SYSTEM
     // ==========================================
     class SandSystem extends Entity {
       constructor(cellSize = 4) {
@@ -232,7 +232,7 @@
         this.solid = false;
         this.static = true;
         this.removable = false;
-        this.voidY = 900; // Void kill plane for both player and sand
+        this.voidY = 900;
       }
 
       key(c, r) { return `${c},${r}`; }
@@ -292,7 +292,6 @@
         }
       }
 
-      // Note: Void is NOT treated as a solid floor so sand falls past voidY and gets deleted
       isCellBlocked(c, r, solids) {
         if (this.grains.has(this.key(c, r))) return true;
         const wx = c * this.cellSize;
@@ -308,11 +307,12 @@
         return false;
       }
 
-      overlapsEntity(ent) {
-        const minC = Math.floor((ent.pos.x + 0.01) / this.cellSize);
-        const maxC = Math.floor((ent.pos.x + ent.size.x - 0.01) / this.cellSize);
-        const minR = Math.floor((ent.pos.y + 0.01) / this.cellSize);
-        const maxR = Math.floor((ent.pos.y + ent.size.y - 0.01) / this.cellSize);
+      // Check if an entity AABB strictly overlaps any sand grain
+      overlaps(box) {
+        const minC = Math.floor(box.pos.x / this.cellSize);
+        const maxC = Math.floor((box.pos.x + box.size.x) / this.cellSize);
+        const minR = Math.floor(box.pos.y / this.cellSize);
+        const maxR = Math.floor((box.pos.y + box.size.y) / this.cellSize);
 
         for (let r = minR; r <= maxR; r++) {
           for (let c = minC; c <= maxC; c++) {
@@ -322,14 +322,15 @@
         return false;
       }
 
-      // Gently scatter overlapping grains outward/upward without ever locking the entity
-      scatterFromEntity(ent, solids, pushDirX) {
-        const minC = Math.floor((ent.pos.x + 0.01) / this.cellSize);
-        const maxC = Math.floor((ent.pos.x + ent.size.x - 0.01) / this.cellSize);
-        const minR = Math.floor((ent.pos.y + 0.01) / this.cellSize);
-        const maxR = Math.floor((ent.pos.y + ent.size.y - 0.01) / this.cellSize);
+      // Forcefully sweep sand grains out of the entity's path and push them BEHIND the player!
+      pushSandAside(ent, solids, moveDirX) {
+        const minC = Math.floor(ent.pos.x / this.cellSize);
+        const maxC = Math.floor((ent.pos.x + ent.size.x) / this.cellSize);
+        const minR = Math.floor(ent.pos.y / this.cellSize);
+        const maxR = Math.floor((ent.pos.y + ent.size.y) / this.cellSize);
 
-        const dir = pushDirX !== 0 ? Math.sign(pushDirX) : (Math.random() < 0.5 ? 1 : -1);
+        // If walking right, push sand to the LEFT (behind you). If walking left, push sand to the RIGHT (behind you).
+        const pushDir = moveDirX !== 0 ? -Math.sign(moveDirX) : 1;
 
         for (let r = minR; r <= maxR; r++) {
           for (let c = minC; c <= maxC; c++) {
@@ -337,27 +338,21 @@
             const grain = this.grains.get(k);
             if (!grain) continue;
 
-            // Search outward up to 3 cells sideways or upward so piles part around you
-            let relocated = false;
-            for (let dist = 1; dist <= 3 && !relocated; dist++) {
-              const spots = [
-                { nc: c + dir * dist, nr: r },
-                { nc: c + dir * dist, nr: r - 1 },
-                { nc: c - dir * dist, nr: r - 1 },
-                { nc: c, nr: r - dist }
-              ];
-              for (const s of spots) {
-                if (!this.isCellBlocked(s.nc, s.nr, solids)) {
-                  this.grains.delete(k);
-                  grain.c = s.nc;
-                  grain.r = s.nr;
-                  this.grains.set(this.key(s.nc, s.nr), grain);
-                  relocated = true;
-                  break;
-                }
-              }
+            // Instantly relocate grain behind the moving player or stack it up on top/behind
+            const targetC = c + pushDir * 2;
+            const targetR = r - 1; // Kick slightly upward into the pile behind you
+
+            if (!this.isCellBlocked(targetC, targetR, solids)) {
+              this.grains.delete(k);
+              grain.c = targetC;
+              grain.r = targetR;
+              this.grains.set(this.key(targetC, targetR), grain);
+            } else if (!this.isCellBlocked(c + pushDir, r, solids)) {
+              this.grains.delete(k);
+              grain.c = c + pushDir;
+              grain.r = r;
+              this.grains.set(this.key(c + pushDir, r), grain);
             }
-            // If completely boxed in by walls, keep grain where it is without freezing player
           }
         }
       }
@@ -372,7 +367,6 @@
           const currentKey = this.key(g.c, g.r);
           if (this.grains.get(currentKey) !== g) continue;
 
-          // Destroy grain immediately when it enters the void
           if (g.r * this.cellSize >= this.voidY) {
             this.grains.delete(currentKey);
             continue;
@@ -396,7 +390,6 @@
 
           if (nextC !== g.c || nextR !== g.r) {
             this.grains.delete(currentKey);
-            // Delete if the new position crossed into the void
             if (nextR * this.cellSize < this.voidY) {
               g.c = nextC;
               g.r = nextR;
@@ -407,7 +400,6 @@
       }
 
       render(ctx) {
-        // Draw subtle void line indicator
         ctx.strokeStyle = 'rgba(255, 42, 85, 0.25)';
         ctx.setLineDash([8, 8]);
         ctx.beginPath();
@@ -473,9 +465,11 @@
           // --------------------------
           // MOVE & RESOLVE X
           // --------------------------
+          const oldX = ent.pos.x;
           ent.pos.x += ent.vel.x * dt;
 
           if (ent.solid) {
+            // Solid entity collisions
             for (const other of solids) {
               if (ent === other || other.destroyed) continue;
               if (this.aabb(ent, other)) {
@@ -493,15 +487,22 @@
               }
             }
 
-            // Sand horizontal movement: auto-step up 1-cell dunes or push grains aside (never softlocks!)
-            if (sandSys && sandSys.overlapsEntity(ent)) {
+            // Solid sand wall collision & sweep sand BEHIND you when walking
+            if (sandSys && sandSys.overlaps(ent)) {
+              // Try stepping up 1 cell (4px) to walk up sand dunes smoothly
               ent.pos.y -= sandSys.cellSize;
-              if (!sandSys.overlapsEntity(ent) && !solids.some(s => s !== ent && this.aabb(ent, s))) {
+              if (!sandSys.overlaps(ent) && !solids.some(s => s !== ent && this.aabb(ent, s))) {
                 ent.grounded = true;
               } else {
                 ent.pos.y += sandSys.cellSize;
-                sandSys.scatterFromEntity(ent, solids, ent.vel.x);
-                ent.vel.x *= 0.85; // Granular resistance while wading through piles
+                // Actively sweep sand behind the player
+                sandSys.pushSandAside(ent, solids, ent.vel.x);
+                
+                // If still overlapping after sweeping, block horizontal movement so you are solid against sand walls!
+                if (sandSys.overlaps(ent)) {
+                  ent.pos.x = oldX;
+                  ent.vel.x = 0;
+                }
               }
             }
           }
@@ -513,6 +514,7 @@
           ent.pos.y += ent.vel.y * dt;
 
           if (ent.solid) {
+            // Solid entity collisions
             for (const other of solids) {
               if (ent === other || other.destroyed) continue;
               if (this.aabb(ent, other)) {
@@ -531,12 +533,12 @@
               }
             }
 
-            // Stand on top of settled sand piles; scatter if jumping upward through falling sand
-            if (sandSys && sandSys.overlapsEntity(ent)) {
-              if (ent.vel.y > 0) {
-                const maxR = Math.floor((ent.pos.y + ent.size.y - 0.01) / sandSys.cellSize);
-                const minC = Math.floor((ent.pos.x + 0.01) / sandSys.cellSize);
-                const maxC = Math.floor((ent.pos.x + ent.size.x - 0.01) / sandSys.cellSize);
+            // Stand firmly on top of sand surfaces
+            if (sandSys && sandSys.overlaps(ent)) {
+              if (ent.vel.y >= 0) {
+                const maxR = Math.floor((ent.pos.y + ent.size.y) / sandSys.cellSize);
+                const minC = Math.floor(ent.pos.x / sandSys.cellSize);
+                const maxC = Math.floor((ent.pos.x + ent.size.x) / sandSys.cellSize);
 
                 let highestSandRow = maxR;
                 for (let r = Math.floor((oldY + ent.size.y) / sandSys.cellSize); r <= maxR; r++) {
@@ -557,7 +559,8 @@
                 ent.grounded = true;
                 ent.vel.y = 0;
               } else if (ent.vel.y < 0) {
-                sandSys.scatterFromEntity(ent, solids, 0);
+                ent.pos.y = oldY;
+                ent.vel.y = 0;
               }
             }
           }
@@ -595,7 +598,7 @@
             this.ctx.fillText(`FPS: ${this.fps} | Entities: ${this.entities.length} | Sand Grains: ${sandCount}${this.paused ? ' [PAUSED]' : ''}`, 12, 22);
           }
 
-          this.input.clearFrame();
+          this.input.clearFile ? this.input.clearFile() : this.input.clearFrame();
           requestAnimationFrame(loop);
         };
         requestAnimationFrame(loop);
