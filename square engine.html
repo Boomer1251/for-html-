@@ -39,15 +39,15 @@
 
     #coords {
       margin-top: 2px;
-      color: rgba(255, 255, 255, 0.3);
+      color: rgba(255, 255, 255, 0.35);
     }
 
     #panel {
       position: fixed;
       top: 14px;
       right: 14px;
-      width: 255px;
-      background: rgba(18, 21, 27, 0.88);
+      width: 265px;
+      background: rgba(18, 21, 27, 0.9);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
@@ -108,8 +108,8 @@
   <canvas id="c"></canvas>
 
   <div id="hud">
-    A / D or Arrows: Move &nbsp;|&nbsp; W / Up / Space: Jump &nbsp;|&nbsp; Shift: Dash &nbsp;|&nbsp; Tab: Tuner &nbsp;|&nbsp; R: Respawn &nbsp;|&nbsp; N: New Seed
-    <div id="coords">X: 0 &nbsp;|&nbsp; Seed: 0</div>
+    A / D or Arrows: Move &nbsp;|&nbsp; W / Up / Space: Jump &nbsp;|&nbsp; S / Down: Drop &nbsp;|&nbsp; Shift: Dash &nbsp;|&nbsp; Tab: Tuner &nbsp;|&nbsp; R: Respawn &nbsp;|&nbsp; N: New Seed
+    <div id="coords">X: 0m &nbsp;|&nbsp; Biome: Plains &nbsp;|&nbsp; Seed: 0</div>
   </div>
 
   <div id="panel">
@@ -185,9 +185,14 @@
       showGrid: true
     };
 
-    // Deterministic Hashing & 1D Value Noise
+    // Deterministic Hashing & Multi-Octave Noise
     function hash(n) {
-      let x = Math.sin(n * 127.1 + cfg.seed * 311.7) * 43758.5453123;
+      const x = Math.sin(n * 127.1 + cfg.seed * 311.7) * 43758.5453123;
+      return x - Math.floor(x);
+    }
+
+    function hash2(a, b) {
+      const x = Math.sin(a * 127.1 + b * 269.5 + cfg.seed * 311.7) * 43758.5453123;
       return x - Math.floor(x);
     }
 
@@ -198,16 +203,58 @@
       return hash(i) * (1 - u) + hash(i + 1) * u;
     }
 
-    function fbm(x) {
+    function fbm(x, octaves = 4) {
       let val = 0;
-      let amp = 0.55;
+      let amp = 0.5;
       let freq = 1;
-      for (let o = 0; o < 3; o++) {
+      let norm = 0;
+      for (let o = 0; o < octaves; o++) {
         val += smoothNoise(x * freq) * amp;
-        freq *= 2.05;
-        amp *= 0.45;
+        norm += amp;
+        freq *= 2.03;
+        amp *= 0.48;
       }
-      return val; // ~0..1
+      return val / norm; // 0..1
+    }
+
+    function ridgedFbm(x, octaves = 3) {
+      let val = 0;
+      let amp = 0.5;
+      let freq = 1;
+      let norm = 0;
+      for (let o = 0; o < octaves; o++) {
+        const n = 1 - Math.abs(smoothNoise(x * freq) * 2 - 1);
+        val += n * n * amp;
+        norm += amp;
+        freq *= 2.1;
+        amp *= 0.5;
+      }
+      return val / norm;
+    }
+
+    // Biome System (Smooth transitions + distinct architectural profiles)
+    const BIOMES = [
+      { name: "Plains",    accent: "rgba(130, 210, 255, 0.28)", fill: "#151920", roughMult: 0.65, gapMult: 0.75, platMult: 0.85 },
+      { name: "Monoliths", accent: "rgba(185, 155, 255, 0.30)", fill: "#171722", roughMult: 1.35, gapMult: 0.95, platMult: 1.15 },
+      { name: "Chasms",    accent: "rgba(255, 150, 120, 0.30)", fill: "#1b161a", roughMult: 0.90, gapMult: 1.65, platMult: 1.35 },
+      { name: "Skyspire",  accent: "rgba(120, 240, 195, 0.30)", fill: "#131c1e", roughMult: 1.15, gapMult: 1.15, platMult: 1.45 }
+    ];
+
+    function getBiomeAtTile(tx) {
+      if (Math.abs(tx) <= 10) return BIOMES[0];
+      const bVal = fbm(tx * 0.011 + 42.7, 2);
+      const idx = Math.min(BIOMES.length - 1, Math.floor(bVal * BIOMES.length));
+      return BIOMES[idx];
+    }
+
+    // Physics-Aware Reachability Helpers
+    function getMaxJumpHeight() {
+      return (cfg.jumpForce * cfg.jumpForce) / (2 * Math.max(cfg.gravity, 1));
+    }
+
+    function getMaxJumpSpan() {
+      const airTime = (2 * cfg.jumpForce) / Math.max(cfg.gravity, 1);
+      return cfg.maxSpeed * airTime + cfg.dashSpeed * 0.24;
     }
 
     // Chunked World Generation
@@ -220,64 +267,216 @@
       return height * 0.72;
     }
 
+    // Deterministic continuous surface height at any tile X (no chunk-seam cliffs)
+    function computeRawSurfaceY(tx) {
+      const baseGroundY = getBaseGroundY();
+      if (Math.abs(tx) <= 4) return Math.round(baseGroundY / 16) * 16;
+
+      // Smooth fade-in out of spawn safe zone
+      const spawnFade = Math.min(1, Math.max(0, (Math.abs(tx) - 4) / 8));
+      const biome = getBiomeAtTile(tx);
+
+      // Macro elevation + micro detail + occasional terrace steps
+      const macro = (fbm(tx * 0.045, 3) - 0.5) * 2.2;
+      const micro = (fbm(tx * 0.18 + 13.1, 3) - 0.5) * 0.9;
+      const ridge = (ridgedFbm(tx * 0.08 + 71.4, 2) - 0.5) * 0.8;
+
+      let combined = macro + micro * 0.55 + ridge * 0.45;
+
+      // Terracing in Monoliths biome for clean stepped architecture
+      if (biome.name === "Monoliths") {
+        combined = Math.round(combined * 3.5) / 3.5;
+      }
+
+      const rawOffset = combined * cfg.roughness * biome.roughMult * spawnFade;
+      return Math.round((baseGroundY + rawOffset) / 16) * 16;
+    }
+
+    // Deterministic gap mask so chunks agree across boundaries
+    function isTileGap(tx) {
+      if (Math.abs(tx) <= 5) return false;
+      const biome = getBiomeAtTile(tx);
+      const effectiveGapChance = Math.min(0.65, cfg.gapChance * biome.gapMult);
+      if (effectiveGapChance <= 0.01) return false;
+
+      // Group gaps into multi-tile chasms (2 to 5 tiles wide) instead of random 1-tile pinholes
+      const chasmCell = Math.floor(tx / 6);
+      const cellRoll = hash(chasmCell * 19.31 + 7.7);
+      if (cellRoll >= effectiveGapChance) return false;
+
+      const maxJumpTiles = Math.max(2, Math.min(6, Math.floor((getMaxJumpSpan() * 0.78) / TILE_W)));
+      const gapWidth = Math.min(maxJumpTiles, 2 + Math.floor(hash(chasmCell * 5.17 + 3.3) * 3));
+      const gapStartInCell = 1 + Math.floor(hash(chasmCell * 11.9 + 2.1) * Math.max(1, 5 - gapWidth));
+      const local = ((tx % 6) + 6) % 6;
+
+      return local >= gapStartInCell && local < gapStartInCell + gapWidth;
+    }
+
     function generateChunk(chunkIndex) {
       const blocks = [];
-      const baseGroundY = getBaseGroundY();
+      const decor = [];
       const startTile = chunkIndex * CHUNK_TILES;
+      const maxStepUp = Math.max(48, Math.floor(getMaxJumpHeight() * 0.78));
 
-      let prevSurfaceY = null;
+      // Precompute tile profiles across chunk + 1-tile neighbor margin
+      const tiles = [];
+      let lastSolidY = computeRawSurfaceY(startTile - 1);
 
-      for (let i = 0; i < CHUNK_TILES; i++) {
+      for (let i = -1; i <= CHUNK_TILES; i++) {
         const tx = startTile + i;
-        const wx = tx * TILE_W;
+        const biome = getBiomeAtTile(tx);
+        const gap = isTileGap(tx);
+        let surfaceY = computeRawSurfaceY(tx);
 
-        // Keep spawn area (around x = 0) safe and flat
-        const nearSpawn = Math.abs(tx) <= 3;
+        // Clamp vertical step between adjacent tiles so terrain is always climbable
+        if (!gap) {
+          if (lastSolidY - surfaceY > maxStepUp) {
+            surfaceY = Math.round((lastSolidY - maxStepUp) / 16) * 16;
+          }
+          lastSolidY = surfaceY;
+        }
 
-        // Gap check
-        const gapRoll = hash(tx * 7.3 + 19);
-        const isGap = !nearSpawn && gapRoll < cfg.gapChance && i > 0 && i < CHUNK_TILES - 1;
+        tiles.push({ tx, wx: tx * TILE_W, biome, gap, surfaceY });
+      }
 
-        if (isGap) {
-          prevSurfaceY = null;
+      // 1. Merge contiguous ground columns with identical surfaceY into clean wide blocks
+      let runStart = null;
+      for (let i = 1; i <= CHUNK_TILES; i++) {
+        const t = tiles[i];
+        if (t.gap) {
+          if (runStart) {
+            blocks.push(runStart);
+            runStart = null;
+          }
           continue;
         }
 
-        // Terrain elevation
-        const n = fbm(tx * 0.14);
-        const offset = nearSpawn ? 0 : (n - 0.5) * 2 * cfg.roughness;
-        const surfaceY = Math.round((baseGroundY + offset) / 16) * 16;
+        if (runStart && runStart.y === t.surfaceY && runStart.biomeName === t.biome.name) {
+          runStart.w += TILE_W;
+        } else {
+          if (runStart) blocks.push(runStart);
+          runStart = {
+            x: t.wx,
+            y: t.surfaceY,
+            w: TILE_W,
+            h: 2200,
+            type: "ground",
+            accent: t.biome.accent,
+            fill: t.biome.fill,
+            biomeName: t.biome.name
+          };
+        }
+      }
+      if (runStart) blocks.push(runStart);
 
-        blocks.push({
-          x: wx,
-          y: surfaceY,
-          w: TILE_W,
-          h: 2000,
-          type: "ground"
-        });
+      // 2. Chasm Bridge Platforms & Stepping Stones (guarantees wide gaps are fun & traversable)
+      let idx = 1;
+      while (idx <= CHUNK_TILES) {
+        const t = tiles[idx];
+        if (!t.gap) {
+          idx++;
+          continue;
+        }
 
-        // Floating platforms
-        if (!nearSpawn && i % 2 === 0) {
-          const platRoll = hash(tx * 13.7 + 91);
-          if (platRoll < cfg.platformDensity) {
-            const tier = hash(tx * 3.1 + 41) > 0.45 ? 1 : 2;
-            const platY = surfaceY - (115 * tier + Math.round(hash(tx * 5.9) * 32));
-            const platSpan = hash(tx * 17.3) > 0.5 ? 2 : 3;
+        let gapEnd = idx;
+        while (gapEnd <= CHUNK_TILES && tiles[gapEnd].gap) gapEnd++;
+        const gapTiles = gapEnd - idx;
+        const leftRefY = tiles[idx - 1].surfaceY;
+        const rightRefY = tiles[Math.min(tiles.length - 1, gapEnd)].surfaceY;
+        const midY = Math.round(((leftRefY + rightRefY) * 0.5) / 16) * 16;
+
+        if (gapTiles >= 3) {
+          const bridgeX = t.wx + Math.floor(gapTiles * 0.5) * TILE_W - TILE_W * 0.5;
+          blocks.push({
+            x: bridgeX,
+            y: midY - 16,
+            w: TILE_W * 1.5,
+            h: 16,
+            type: "platform",
+            oneWay: true,
+            accent: t.biome.accent
+          });
+        }
+        idx = gapEnd;
+      }
+
+      // 3. Multi-Tier Parkour Routes, Bounce Pads & Sky Islands
+      const maxJumpH = getMaxJumpHeight();
+      const tierStep = Math.max(88, Math.min(132, Math.round((maxJumpH * 0.72) / 16) * 16));
+
+      for (let i = 1; i <= CHUNK_TILES; i++) {
+        const t = tiles[i];
+        if (Math.abs(t.tx) <= 4) continue;
+
+        const effectivePlat = Math.min(1, cfg.platformDensity * t.biome.platMult);
+        const routeRoll = hash(t.tx * 13.7 + 91.3);
+
+        // Elevated multi-step parkour chains every few tiles
+        if (t.tx % 3 === 0 && routeRoll < effectivePlat) {
+          const chainLen = 1 + Math.floor(hash(t.tx * 7.1 + 12) * 3); // 1 to 3 connected platforms
+          let curX = t.wx;
+          let curY = t.surfaceY - tierStep;
+
+          for (let step = 0; step < chainLen; step++) {
+            const spanTiles = 2 + Math.floor(hash2(t.tx, step * 19 + 3) * 2); // 2 or 3 tiles wide
+            const w = spanTiles * TILE_W;
 
             blocks.push({
-              x: wx,
-              y: platY,
-              w: TILE_W * platSpan,
-              h: 18,
-              type: "platform"
+              x: curX,
+              y: curY,
+              w,
+              h: 16,
+              type: "platform",
+              oneWay: true,
+              accent: t.biome.accent
             });
+
+            // High-altitude Skyspire bonus island above tall chains
+            if (step === chainLen - 1 && t.biome.name === "Skyspire" && hash2(t.tx, 99) > 0.45) {
+              blocks.push({
+                x: curX + TILE_W * 0.5,
+                y: curY - tierStep,
+                w: TILE_W * 2,
+                h: 16,
+                type: "platform",
+                oneWay: true,
+                accent: t.biome.accent
+              });
+            }
+
+            const dir = hash2(t.tx, step + 7) > 0.25 ? 1 : -1;
+            curX += dir * (w + TILE_W * (1 + Math.floor(hash2(t.tx, step + 31) * 1.5)));
+            curY -= tierStep * (hash2(t.tx, step + 53) > 0.35 ? 1 : 0);
           }
         }
 
-        prevSurfaceY = surfaceY;
+        // Launch / Bounce Pads on flat ground before high cliffs or in Skyspire/Monoliths
+        if (!t.gap && t.tx % 7 === 0 && hash(t.tx * 23.1 + 5) < 0.22 * effectivePlat) {
+          blocks.push({
+            x: t.wx + 12,
+            y: t.surfaceY - 10,
+            w: TILE_W - 24,
+            h: 10,
+            type: "bounce",
+            accent: "#5ef2b8"
+          });
+        }
+
+        // Background Architectural Pillars & Monoliths (visual depth, non-solid)
+        if (!t.gap && t.tx % 4 === 0 && hash(t.tx * 31.7 + 17) < 0.48) {
+          const pillarH = 120 + Math.floor(hash(t.tx * 9.3) * 260);
+          const pillarW = 24 + Math.floor(hash(t.tx * 4.7) * 40);
+          decor.push({
+            x: t.wx + (TILE_W - pillarW) * 0.5,
+            y: t.surfaceY - pillarH,
+            w: pillarW,
+            h: pillarH,
+            biome: t.biome.name
+          });
+        }
       }
 
-      return blocks;
+      return { blocks, decor };
     }
 
     function getChunk(chunkIndex) {
@@ -292,7 +491,7 @@
       const cEnd = Math.floor(maxX / CHUNK_W) + 1;
       const list = [];
       for (let c = cStart; c <= cEnd; c++) {
-        const blocks = getChunk(c);
+        const blocks = getChunk(c).blocks;
         for (let i = 0; i < blocks.length; i++) {
           list.push(blocks[i]);
         }
@@ -313,6 +512,7 @@
       grounded: false,
       coyoteTimer: 0,
       jumpBufferTimer: 0,
+      dropThroughTimer: 0,
       dashTimer: 0,
       dashFlash: 0,
       scaleX: 1,
@@ -334,6 +534,7 @@
       player.grounded = false;
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
+      player.dropThroughTimer = 0;
       player.dashTimer = 0;
       player.dashFlash = 0;
       player.scaleX = 1;
@@ -368,6 +569,9 @@
       }
       if ((e.code === "Space" || e.code === "KeyW" || e.code === "ArrowUp") && !keys.has(e.code)) {
         player.jumpBufferTimer = 0.12;
+      }
+      if ((e.code === "KeyS" || e.code === "ArrowDown") && !keys.has(e.code)) {
+        player.dropThroughTimer = 0.18;
       }
       if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !keys.has(e.code)) {
         triggerDash();
@@ -429,8 +633,8 @@
     bindSlider("s-plat", "v-plat", "platformDensity", true);
     bindSlider("s-gap", "v-gap", "gapChance", true);
     bindSlider("s-gravity", "v-gravity", "gravity");
-    bindSlider("s-jump", "v-jump", "jumpForce");
-    bindSlider("s-speed", "v-speed", "maxSpeed");
+    bindSlider("s-jump", "v-jump", "jumpForce", true);
+    bindSlider("s-speed", "v-speed", "maxSpeed", true);
     bindSlider("s-dash", "v-dash", "dashSpeed");
 
     const btnGrid = document.getElementById("btn-grid");
@@ -453,6 +657,7 @@
       if (player.dashFlash > 0) player.dashFlash = Math.max(0, player.dashFlash - dt * 4);
       if (player.coyoteTimer > 0) player.coyoteTimer = Math.max(0, player.coyoteTimer - dt);
       if (player.jumpBufferTimer > 0) player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
+      if (player.dropThroughTimer > 0) player.dropThroughTimer = Math.max(0, player.dropThroughTimer - dt);
 
       const ix = getMoveX();
       const controlMult = player.grounded ? 1 : cfg.airControl;
@@ -482,12 +687,13 @@
       player.vy += cfg.gravity * dt;
 
       const half = cfg.size / 2;
-      const solids = getNearbySolids(player.x - 200, player.x + 200);
+      const solids = getNearbySolids(player.x - 240, player.x + 240);
 
-      // Step X & resolve horizontal collisions
+      // Step X & resolve horizontal collisions (skip one-way platforms)
       player.x += player.vx * dt;
       for (let i = 0; i < solids.length; i++) {
         const s = solids[i];
+        if (s.oneWay || s.type === "bounce") continue;
         if (aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, s.x, s.y, s.w, s.h)) {
           if (player.vx > 0) {
             player.x = s.x - half;
@@ -500,14 +706,33 @@
       }
 
       // Step Y & resolve vertical collisions
+      const prevBottom = player.y + half;
       const wasGrounded = player.grounded;
       player.grounded = false;
       player.y += player.vy * dt;
 
       for (let i = 0; i < solids.length; i++) {
         const s = solids[i];
-        if (aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, s.x, s.y, s.w, s.h)) {
-          if (player.vy > 0) {
+        if (!aabbOverlap(player.x - half, player.y - half, cfg.size, cfg.size, s.x, s.y, s.w, s.h)) {
+          continue;
+        }
+
+        // Bounce pad impulse
+        if (s.type === "bounce" && player.vy >= 0) {
+          player.y = s.y - half;
+          player.vy = -cfg.jumpForce * 1.48;
+          player.grounded = false;
+          player.coyoteTimer = 0;
+          player.scaleX = 0.65;
+          player.scaleY = 1.42;
+          player.dashFlash = 0.7;
+          continue;
+        }
+
+        // One-way platform (passable from below or when pressing Down/S)
+        if (s.oneWay) {
+          if (player.dropThroughTimer > 0) continue;
+          if (player.vy > 0 && prevBottom <= s.y + 8) {
             if (!wasGrounded && player.vy > 140) {
               const impact = Math.min(player.vy / 1200, 1);
               player.scaleX = 1 + 0.32 * impact;
@@ -517,10 +742,24 @@
             player.vy = 0;
             player.grounded = true;
             player.coyoteTimer = 0.1;
-          } else if (player.vy < 0) {
-            player.y = s.y + s.h + half;
-            player.vy = 0;
           }
+          continue;
+        }
+
+        // Full solid ground
+        if (player.vy > 0) {
+          if (!wasGrounded && player.vy > 140) {
+            const impact = Math.min(player.vy / 1200, 1);
+            player.scaleX = 1 + 0.32 * impact;
+            player.scaleY = 1 - 0.26 * impact;
+          }
+          player.y = s.y - half;
+          player.vy = 0;
+          player.grounded = true;
+          player.coyoteTimer = 0.1;
+        } else if (player.vy < 0) {
+          player.y = s.y + s.h + half;
+          player.vy = 0;
         }
       }
 
@@ -528,8 +767,8 @@
         player.coyoteTimer = 0.1;
       }
 
-      // Respawn if fallen into a gap
-      if (player.y > getBaseGroundY() + 850) {
+      // Respawn if fallen into a chasm
+      if (player.y > getBaseGroundY() + 900) {
         respawnPlayer();
         return;
       }
@@ -556,7 +795,9 @@
         if (player.trail[i].alpha <= 0) player.trail.splice(i, 1);
       }
 
-      coordsEl.textContent = `X: ${Math.round(player.x / TILE_W)}m  |  Seed: ${cfg.seed}`;
+      const currentTile = Math.round(player.x / TILE_W);
+      const curBiome = getBiomeAtTile(currentTile);
+      coordsEl.textContent = `X: ${currentTile}m  |  Biome: ${curBiome.name}  |  Seed: ${cfg.seed}`;
     }
 
     function draw() {
@@ -586,26 +827,75 @@
         ctx.stroke();
       }
 
+      // Subtle Parallax Distant Skyline Layer
+      ctx.save();
+      ctx.translate(-camLeft * 0.35, -camTop * 0.2);
+      const bgStart = Math.floor((camLeft * 0.35 - 200) / 180);
+      const bgEnd = Math.floor((camLeft * 0.35 + width + 200) / 180);
+      for (let i = bgStart; i <= bgEnd; i++) {
+        const h = 90 + hash(i * 17.3 + 5) * 240;
+        const w = 48 + hash(i * 9.1 + 2) * 70;
+        const x = i * 180;
+        const y = getBaseGroundY() - h + 40;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.018)";
+        ctx.fillRect(x, y, w, h + 600);
+      }
+      ctx.restore();
+
       ctx.save();
       ctx.translate(-camLeft, -camTop);
 
+      const cStart = Math.floor((camLeft - 160) / CHUNK_W) - 1;
+      const cEnd = Math.floor((camLeft + width + 160) / CHUNK_W) + 1;
+
+      // Background Architectural Pillars
+      for (let c = cStart; c <= cEnd; c++) {
+        const { decor } = getChunk(c);
+        for (let i = 0; i < decor.length; i++) {
+          const d = decor[i];
+          ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
+          ctx.fillRect(d.x, d.y, d.w, d.h);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.045)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(d.x, d.y, d.w, d.h);
+        }
+      }
+
       // Render Visible World Chunks
-      const visibleSolids = getNearbySolids(camLeft - 128, camLeft + width + 128);
-      for (let i = 0; i < visibleSolids.length; i++) {
-        const b = visibleSolids[i];
-        if (b.type === "ground") {
-          ctx.fillStyle = "#161a20";
-          ctx.fillRect(b.x, b.y, b.w + 0.5, b.h);
+      for (let c = cStart; c <= cEnd; c++) {
+        const { blocks } = getChunk(c);
+        for (let i = 0; i < blocks.length; i++) {
+          const b = blocks[i];
+          if (b.type === "ground") {
+            ctx.fillStyle = b.fill || "#161a20";
+            ctx.fillRect(b.x, b.y, b.w + 0.5, b.h);
 
-          ctx.fillStyle = "rgba(255, 255, 255, 0.24)";
-          ctx.fillRect(b.x, b.y, b.w + 0.5, 2);
-        } else {
-          ctx.fillStyle = "#1c2129";
-          ctx.fillRect(b.x, b.y, b.w, b.h);
+            // Subtle vertical strata lines inside wide merged ground blocks
+            ctx.fillStyle = "rgba(255, 255, 255, 0.018)";
+            for (let gx = b.x + TILE_W; gx < b.x + b.w; gx += TILE_W) {
+              ctx.fillRect(gx, b.y + 4, 1, 180);
+            }
 
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(b.x, b.y, b.w, b.h);
+            // Biome-tinted surface trim
+            ctx.fillStyle = b.accent || "rgba(255, 255, 255, 0.24)";
+            ctx.fillRect(b.x, b.y, b.w + 0.5, 2.5);
+          } else if (b.type === "bounce") {
+            ctx.fillStyle = "rgba(94, 242, 184, 0.24)";
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+            ctx.fillStyle = "#5ef2b8";
+            ctx.fillRect(b.x, b.y, b.w, 3);
+          } else {
+            ctx.fillStyle = "#1c2129";
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+
+            // Top lip highlights one-way pass-through platforms
+            ctx.fillStyle = b.accent || "rgba(255, 255, 255, 0.28)";
+            ctx.fillRect(b.x, b.y, b.w, 2);
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(b.x, b.y, b.w, b.h);
+          }
         }
       }
 
