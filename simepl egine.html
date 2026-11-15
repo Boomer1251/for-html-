@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2D HTML5 Engine + Level Editor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+    body {
+      background: #0d0d12;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Segoe UI', monospace, sans-serif;
+      color: #e2e8f0;
+    }
+    #viewport {
+      position: relative;
+      width: 960px;
+      height: 540px;
+      border: 1px solid #2a2a3d;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+    canvas {
+      background: #161622;
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+    #toolbar {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(18, 18, 28, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid #33334d;
+      border-radius: 10px;
+      z-index: 10;
+    }
+    .tool-btn {
+      background: #232336;
+      color: #cbd5e1;
+      border: 1px solid #383854;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.12s ease;
+    }
+    .tool-btn:hover { background: #2e2e48; border-color: #52527a; }
+    .tool-btn.active {
+      background: #00d2ff22;
+      border-color: #00d2ff;
+      color: #fff;
+      box-shadow: 0 0 10px #00d2ff33;
+    }
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .divider {
+      width: 1px;
+      background: #33334d;
+      margin: 0 2px;
+    }
+    #help-hint {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #8892b0;
+      background: rgba(18, 18, 28, 0.75);
+      padding: 6px 10px;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport">
+    <canvas id="game"></canvas>
+    <div id="help-hint">LMB: Place | RMB: Delete | G: Snap Grid | P: Pause</div>
+    <div id="toolbar">
+      <button class="tool-btn active" data-tool="platform"><span class="swatch" style="background:#3a3a59"></span>Platform</button>
+      <button class="tool-btn" data-tool="box"><span class="swatch" style="background:#ff9f1c"></span>Crate</button>
+      <button class="tool-btn" data-tool="bounce"><span class="swatch" style="background:#00ff88"></span>Bounce Pad</button>
+      <button class="tool-btn" data-tool="hazard"><span class="swatch" style="background:#ff2a55"></span>Spike/Lava</button>
+      <div class="divider"></div>
+      <button class="tool-btn active" id="btn-grid">Grid: ON</button>
+      <button class="tool-btn" id="btn-pause">Pause: OFF</button>
+      <button class="tool-btn" id="btn-clear" style="color:#ff6b81">Clear</button>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. VECTOR MATH
+    // ==========================================
+    class Vec2 {
+      constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+      add(v) { return new Vec2(this.x + v.x, this.y + v.y); }
+      sub(v) { return new Vec2(this.x - v.x, this.y - v.y); }
+      scale(s) { return new Vec2(this.x * s, this.y * s); }
+      mag() { return Math.hypot(this.x, this.y); }
+      normalize() { const m = this.mag(); return m === 0 ? new Vec2() : this.scale(1 / m); }
+      copy() { return new Vec2(this.x, this.y); }
+    }
+
+    // ==========================================
+    // 2. INPUT MANAGER
+    // ==========================================
+    class Input {
+      constructor(canvas) {
+        this.keys = new Set();
+        this.keysDown = new Set();
+        this.mouse = { pos: new Vec2(), down: false, rightDown: false, clicked: false, rightClicked: false };
+
+        window.addEventListener('keydown', e => {
+          if (!this.keys.has(e.code)) this.keysDown.add(e.code);
+          this.keys.add(e.code);
+        });
+        window.addEventListener('keyup', e => this.keys.delete(e.code));
+
+        canvas.addEventListener('mousemove', e => {
+          const rect = canvas.getBoundingClientRect();
+          this.mouse.pos.x = e.clientX - rect.left;
+          this.mouse.pos.y = e.clientY - rect.top;
+        });
+        canvas.addEventListener('mousedown', e => {
+          if (e.button === 0) { this.mouse.down = true; this.mouse.clicked = true; }
+          if (e.button === 2) { this.mouse.rightDown = true; this.mouse.rightClicked = true; }
+        });
+        window.addEventListener('mouseup', e => {
+          if (e.button === 0) this.mouse.down = false;
+          if (e.button === 2) this.mouse.rightDown = false;
+        });
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+      }
+      isDown(code) { return this.keys.has(code); }
+      isPressed(code) { return this.keysDown.has(code); }
+      clearFrame() {
+        this.keysDown.clear();
+        this.mouse.clicked = false;
+        this.mouse.rightClicked = false;
+      }
+    }
+
+    // ==========================================
+    // 3. CAMERA
+    // ==========================================
+    class Camera {
+      constructor(width, height) {
+        this.pos = new Vec2(0, 0);
+        this.width = width;
+        this.height = height;
+        this.zoom = 1;
+        this.lerpSpeed = 8;
+      }
+      follow(target, dt) {
+        const targetX = target.pos.x + target.size.x / 2 - this.width / (2 * this.zoom);
+        const targetY = target.pos.y + target.size.y / 2 - this.height / (2 * this.zoom);
+        this.pos.x += (targetX - this.pos.x) * Math.min(1, this.lerpSpeed * dt);
+        this.pos.y += (targetY - this.pos.y) * Math.min(1, this.lerpSpeed * dt);
+      }
+      screenToWorld(screenPos) {
+        return new Vec2(
+          screenPos.x / this.zoom + this.pos.x,
+          screenPos.y / this.zoom + this.pos.y
+        );
+      }
+      apply(ctx) {
+        ctx.save();
+        ctx.scale(this.zoom, this.zoom);
+        ctx.translate(-Math.round(this.pos.x), -Math.round(this.pos.y));
+      }
+      reset(ctx) { ctx.restore(); }
+    }
+
+    // ==========================================
+    // 4. ENTITY BASE CLASS
+    // ==========================================
+    class Entity {
+      constructor(x, y, w, h, color = '#fff') {
+        this.pos = new Vec2(x, y);
+        this.vel = new Vec2(0, 0);
+        this.acc = new Vec2(0, 0);
+        this.size = new Vec2(w, h);
+        this.color = color;
+        this.solid = true;
+        this.static = false;
+        this.useGravity = false;
+        this.grounded = false;
+        this.tags = new Set();
+        this.destroyed = false;
+        this.removable = true;
+      }
+      containsPoint(pt) {
+        return pt.x >= this.pos.x && pt.x <= this.pos.x + this.size.x &&
+               pt.y >= this.pos.y && pt.y <= this.pos.y + this.size.y;
+      }
+      onCollide(other, side, engine) {}
+      update(dt, engine) {}
+      render(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(Math.round(this.pos.x), Math.round(this.pos.y), this.size.x, this.size.y);
+      }
+    }
+
+    // ==========================================
+    // 5. CORE 2D ENGINE (PHYSICS + LOOP)
+    // ==========================================
+    class Engine {
+      constructor(canvasId, width = 960, height = 540) {
+        this.canvas = document.getElementById(canvasId);
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx = this.canvas.getContext('2d');
+        this.ctx.imageSmoothingEnabled = false;
+
+        this.input = new Input(this.canvas);
+        this.camera = new Camera(width, height);
+        this.entities = [];
+        this.gravity = 1600;
+        this.lastTime = 0;
+        this.fps = 0;
+        this.paused = false;
+        this.debug = true;
+      }
+
+      add(entity) {
+        this.entities.push(entity);
+        return entity;
+      }
+
+      aabb(a, b) {
+        return (
+          a.pos.x < b.pos.x + b.size.x &&
+          a.pos.x + a.size.x > b.pos.x &&
+          a.pos.y < b.pos.y + b.size.y &&
+          a.pos.y + a.size.y > b.pos.y
+        );
+      }
+
+      resolvePhysics(dt) {
+        const dynamics = this.entities.filter(e => !e.static && !e.destroyed);
+        const solids = this.entities.filter(e => e.solid && !e.destroyed);
+
+        for (const ent of dynamics) {
+          ent.grounded = false;
+
+          if (ent.useGravity) ent.vel.y += this.gravity * dt;
+          ent.vel.x += ent.acc.x * dt;
+          ent.vel.y += ent.acc.y * dt;
+
+          // Move & Resolve X
+          ent.pos.x += ent.vel.x * dt;
+          if (ent.solid) {
+            for (const other of solids) {
+              if (ent === other || other.destroyed) continue;
+              if (this.aabb(ent, other)) {
+                if (ent.vel.x > 0) {
+                  ent.pos.x = other.pos.x - ent.size.x;
+                  ent.onCollide(other, 'right', this);
+                  other.onCollide(ent, 'left', this);
+                } else if (ent.vel.x < 0) {
+                  ent.pos.x = other.pos.x + other.size.x;
+                  ent.onCollide(other, 'left', this);
+                  other.onCollide(ent, 'right', this);
+                }
+                ent.vel.x = 0;
+              }
+            }
+          }
+
+          // Move & Resolve Y
+          ent.pos.y += ent.vel.y * dt;
+          if (ent.solid) {
+            for (const other of solids) {
+              if (ent === other || other.destroyed) continue;
+              if (this.aabb(ent, other)) {
+                if (ent.vel.y > 0) {
+                  ent.pos.y = other.pos.y - ent.size.y;
+                  ent.grounded = true;
+                  ent.onCollide(other, 'bottom', this);
+                  other.onCollide(ent, 'top', this);
+                } else if (ent.vel.y < 0) {
+                  ent.pos.y = other.pos.y + other.size.y;
+                  ent.onCollide(other, 'top', this);
+                  other.onCollide(ent, 'bottom', this);
+                }
+                ent.vel.y = 0;
+              }
+            }
+          }
+        }
+      }
+
+      start(onPreRender = null, onPostRender = null) {
+        const loop = (now) => {
+          const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+          this.lastTime = now;
+          this.fps = Math.round(1 / (dt || 0.016));
+
+          if (!this.paused) {
+            for (const ent of this.entities) {
+              if (!ent.destroyed) ent.update(dt, this);
+            }
+            this.resolvePhysics(dt);
+          }
+
+          this.entities = this.entities.filter(e => !e.destroyed);
+
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          this.camera.apply(this.ctx);
+
+          if (onPreRender) onPreRender(this.ctx);
+          for (const ent of this.entities) ent.render(this.ctx);
+          if (onPostRender) onPostRender(this.ctx);
+
+          this.camera.reset(this.ctx);
+
+          if (this.debug) {
+            this.ctx.fillStyle = '#00ff88';
+            this.ctx.font = '13px monospace';
+            this.ctx.fillText(`FPS: ${this.fps} | Entities: ${this.entities.length}${this.paused ? ' [PAUSED]' : ''}`, 12, 22);
+          }
+
+          this.input.clearFrame();
+          requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+      }
+    }
+
+    // ==========================================
+    // 6. PLACEABLE ENTITY TYPES
+    // ==========================================
+    class Player extends Entity {
+      constructor(x, y) {
+        super(x, y, 32, 48, '#00d2ff');
+        this.spawn = new Vec2(x, y);
+        this.useGravity = true;
+        this.speed = 380;
+        this.jumpForce = -680;
+        this.removable = false;
+        this.tags.add('player');
+      }
+      respawn() {
+        this.pos = this.spawn.copy();
+        this.vel = new Vec2(0, 0);
+      }
+      update(dt, engine) {
+        const input = engine.input;
+        let dir = 0;
+        if (input.isDown('KeyA') || input.isDown('ArrowLeft')) dir -= 1;
+        if (input.isDown('KeyD') || input.isDown('ArrowRight')) dir += 1;
+
+        this.vel.x = dir * this.speed;
+
+        if ((input.isPressed('Space') || input.isPressed('KeyW') || input.isPressed('ArrowUp')) && this.grounded) {
+          this.vel.y = this.jumpForce;
+        }
+
+        if (this.pos.y > 1400) this.respawn();
+        engine.camera.follow(this, dt);
+      }
+    }
+
+    class Platform extends Entity {
+      constructor(x, y, w = 128, h = 32) {
+        super(x, y, w, h, '#3a3a59');
+        this.static = true;
+      }
+      render(ctx) {
+        super.render(ctx);
+        ctx.strokeStyle = '#52527a';
+        ctx.strokeRect(Math.round(this.pos.x) + 0.5, Math.round(this.pos.y) + 0.5, this.size.x - 1, this.size.y - 1);
+      }
+    }
+
+    class Crate extends Entity {
+      constructor(x, y) {
+        super(x, y, 32, 32, '#ff9f1c');
+        this.useGravity = true;
+      }
+      update(dt) {
+        this.vel.x *= Math.pow(0.001, dt); // Ground/air friction
+      }
+      render(ctx) {
+        super.render(ctx);
+        ctx.strokeStyle = '#b36b00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(Math.round(this.pos.x) + 1, Math.round(this.pos.y) + 1, this.size.x - 2, this.size.y - 2);
+        ctx.lineWidth = 1;
+      }
+    }
+
+    class BouncePad extends Entity {
+      constructor(x, y) {
+        super(x, y, 64, 16, '#00ff88');
+        this.static = true;
+      }
+      onCollide(other, side) {
+        if (side === 'top' && !other.static) {
+          other.vel.y = -980;
+          other.grounded = false;
+        }
+      }
+    }
+
+    class Hazard extends Entity {
+      constructor(x, y) {
+        super(x, y, 32, 24, '#ff2a55');
+        this.static = true;
+      }
+      onCollide(other) {
+        if (other.tags.has('player')) other.respawn();
+        else if (!other.static) other.destroyed = true;
+      }
+    }
+
+    // ==========================================
+    // 7. LEVEL EDITOR CONTROLLER
+    // ==========================================
+    class LevelEditor {
+      constructor(engine) {
+        this.engine = engine;
+        this.gridSize = 32;
+        this.snapToGrid = true;
+        this.selectedTool = 'platform';
+
+        this.blueprints = {
+          platform: { w: 128, h: 32, color: 'rgba(58, 58, 89, 0.55)', create: (x, y) => new Platform(x, y, 128, 32) },
+          box:      { w: 32,  h: 32, color: 'rgba(255, 159, 28, 0.55)', create: (x, y) => new Crate(x, y) },
+          bounce:   { w: 64,  h: 16, color: 'rgba(0, 255, 136, 0.55)', create: (x, y) => new BouncePad(x, y) },
+          hazard:   { w: 32,  h: 24, color: 'rgba(255, 42, 85, 0.55)', create: (x, y) => new Hazard(x, y) }
+        };
+
+        this.bindUI();
+      }
+
+      bindUI() {
+        document.querySelectorAll('[data-tool]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            this.selectedTool = btn.dataset.tool;
+          });
+        });
+
+        const gridBtn = document.getElementById('btn-grid');
+        gridBtn.addEventListener('click', () => {
+          this.snapToGrid = !this.snapToGrid;
+          gridBtn.textContent = `Grid: ${this.snapToGrid ? 'ON' : 'OFF'}`;
+          gridBtn.classList.toggle('active', this.snapToGrid);
+        });
+
+        const pauseBtn = document.getElementById('btn-pause');
+        pauseBtn.addEventListener('click', () => {
+          this.engine.paused = !this.engine.paused;
+          pauseBtn.textContent = `Pause: ${this.engine.paused ? 'ON' : 'OFF'}`;
+          pauseBtn.classList.toggle('active', this.engine.paused);
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+          this.engine.entities.forEach(e => { if (e.removable) e.destroyed = true; });
+        });
+
+        window.addEventListener('keydown', e => {
+          if (e.code === 'KeyG') gridBtn.click();
+          if (e.code === 'KeyP') pauseBtn.click();
+          if (e.code === 'Digit1') document.querySelector('[data-tool="platform"]').click();
+          if (e.code === 'Digit2') document.querySelector('[data-tool="box"]').click();
+          if (e.code === 'Digit3') document.querySelector('[data-tool="bounce"]').click();
+          if (e.code === 'Digit4') document.querySelector('[data-tool="hazard"]').click();
+        });
+      }
+
+      getPlacementPos() {
+        const worldMouse = this.engine.camera.screenToWorld(this.engine.input.mouse.pos);
+        const bp = this.blueprints[this.selectedTool];
+        if (this.snapToGrid) {
+          return new Vec2(
+            Math.floor(worldMouse.x / this.gridSize) * this.gridSize,
+            Math.floor(worldMouse.y / this.gridSize) * this.gridSize
+          );
+        }
+        return new Vec2(Math.round(worldMouse.x - bp.w / 2), Math.round(worldMouse.y - bp.h / 2));
+      }
+
+      update() {
+        const input = this.engine.input;
+
+        // Left Click: Place Entity
+        if (input.mouse.clicked) {
+          const pos = this.getPlacementPos();
+          const bp = this.blueprints[this.selectedTool];
+          const candidate = bp.create(pos.x, pos.y);
+
+          // Prevent overlapping solid spawns inside existing entities
+          const blocked = this.engine.entities.some(e => !e.destroyed && this.engine.aabb(candidate, e));
+          if (!blocked) this.engine.add(candidate);
+        }
+
+        // Right Click (or Hold): Delete Entity under cursor
+        if (input.mouse.rightDown) {
+          const worldMouse = this.engine.camera.screenToWorld(input.mouse.pos);
+          for (let i = this.engine.entities.length - 1; i >= 0; i--) {
+            const ent = this.engine.entities[i];
+            if (ent.removable && ent.containsPoint(worldMouse)) {
+              ent.destroyed = true;
+              break;
+            }
+          }
+        }
+      }
+
+      renderGrid(ctx) {
+        if (!this.snapToGrid) return;
+        const cam = this.engine.camera;
+        const startX = Math.floor(cam.pos.x / this.gridSize) * this.gridSize;
+        const startY = Math.floor(cam.pos.y / this.gridSize) * this.gridSize;
+        const endX = cam.pos.x + cam.width / cam.zoom;
+        const endY = cam.pos.y + cam.height / cam.zoom;
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.beginPath();
+        for (let x = startX; x <= endX; x += this.gridSize) {
+          ctx.moveTo(x, startY);
+          ctx.lineTo(x, endY);
+        }
+        for (let y = startY; y <= endY; y += this.gridSize) {
+          ctx.moveTo(startX, y);
+          ctx.lineTo(endX, y);
+        }
+        ctx.stroke();
+      }
+
+      renderGhost(ctx) {
+        const pos = this.getPlacementPos();
+        const bp = this.blueprints[this.selectedTool];
+        ctx.fillStyle = bp.color;
+        ctx.fillRect(pos.x, pos.y, bp.w, bp.h);
+        ctx.strokeStyle = '#ffffff88';
+        ctx.strokeRect(pos.x + 0.5, pos.y + 0.5, bp.w - 1, bp.h - 1);
+      }
+    }
+
+    // ==========================================
+    // 8. BOOT SCENE
+    // ==========================================
+    const game = new Engine('game');
+    const editor = new LevelEditor(game);
+
+    const player = game.add(new Player(128, 200));
+
+    // Starter Floor
+    const floor = new Platform(-256, 448, 1280, 64);
+    floor.removable = false; // Keep main floor safe from accidental deletion
+    game.add(floor);
+
+    game.start(
+      (ctx) => {
+        editor.update();
+        editor.renderGrid(ctx);
+      },
+      (ctx) => {
+        editor.renderGhost(ctx);
+      }
+    );
+  </script>
+</body>
+</html>
