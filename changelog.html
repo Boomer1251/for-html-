@@ -34,7 +34,7 @@
 
         /* Sidebar Editor */
         .sidebar {
-            width: 480px;
+            width: 520px;
             background-color: var(--panel-bg);
             border-right: 1px solid var(--panel-border);
             display: flex;
@@ -60,6 +60,7 @@
         .action-buttons {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         button {
@@ -98,6 +99,66 @@
 
         button.danger:hover {
             background-color: var(--danger-hover);
+        }
+
+        /* Quick Tag Buttons */
+        .tag-toolbar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .tag-toolbar span {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 2px;
+        }
+
+        button.tag-btn {
+            padding: 4px 9px;
+            font-size: 11px;
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        button.tag-new {
+            background-color: rgba(85, 255, 127, 0.15);
+            color: #55ff7f;
+            border: 1px solid rgba(85, 255, 127, 0.4);
+        }
+        button.tag-new:hover {
+            background-color: rgba(85, 255, 127, 0.28);
+        }
+
+        button.tag-fix {
+            background-color: rgba(255, 85, 85, 0.15);
+            color: #ff5555;
+            border: 1px solid rgba(255, 85, 85, 0.4);
+        }
+        button.tag-fix:hover {
+            background-color: rgba(255, 85, 85, 0.28);
+        }
+
+        button.tag-balance {
+            background-color: rgba(255, 204, 77, 0.15);
+            color: #ffcc4d;
+            border: 1px solid rgba(255, 204, 77, 0.4);
+        }
+        button.tag-balance:hover {
+            background-color: rgba(255, 204, 77, 0.28);
+        }
+
+        button.tag-bullet {
+            background-color: #252934;
+            color: #d2d2d2;
+            border: 1px solid #383e4f;
+        }
+        button.tag-bullet:hover {
+            background-color: #323746;
         }
 
         .editor-content {
@@ -143,9 +204,10 @@
 
         textarea {
             resize: vertical;
-            min-height: 80px;
+            min-height: 95px;
             font-family: monospace;
             font-size: 13px;
+            line-height: 1.4;
         }
 
         .patch-list {
@@ -195,22 +257,21 @@
             letter-spacing: 1px;
         }
 
-        /* Simulated Roblox SurfaceGui */
+        /* Simulated Roblox SurfaceGui (Original Style + Readable Scale) */
         .roblox-surface {
             width: 800px;
             height: 600px;
-            background-color: rgba(0, 0, 0, 0.85);
+            background-color: rgba(0, 0, 0, 0.8);
             border: 5px solid #000;
             position: relative;
             overflow: hidden;
             box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-            border-radius: 4px;
             display: flex;
             flex-direction: column;
         }
 
         .roblox-header {
-            height: 50px;
+            height: 56px;
             width: 100%;
             position: relative;
             display: flex;
@@ -220,7 +281,7 @@
         .roblox-title {
             position: absolute;
             left: 10px;
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
             color: #fff;
             font-family: sans-serif;
@@ -228,12 +289,12 @@
 
         .roblox-tab-nav {
             position: absolute;
-            left: 210px;
+            left: 225px;
             right: 10px;
             top: 8px;
             bottom: 8px;
             display: flex;
-            gap: 4px;
+            gap: 5px;
             overflow-x: auto;
             align-items: center;
             scrollbar-width: thin;
@@ -243,9 +304,9 @@
             background-color: #868686;
             color: #fff;
             border: none;
-            padding: 0 16px;
+            padding: 0 18px;
             height: 100%;
-            font-size: 22px;
+            font-size: 24px;
             font-family: sans-serif;
             cursor: pointer;
             white-space: nowrap;
@@ -260,15 +321,15 @@
 
         .roblox-content-scroll {
             position: absolute;
-            top: 55px;
+            top: 62px;
             left: 10px;
             right: 10px;
             bottom: 10px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding-right: 5px;
+            gap: 14px;
+            padding-right: 6px;
         }
 
         .roblox-patch-group {
@@ -278,15 +339,15 @@
         }
 
         .roblox-patch-header {
-            font-size: 22px;
+            font-size: 26px;
             font-weight: bold;
             color: #fff;
             font-family: sans-serif;
         }
 
         .roblox-patch-body {
-            font-size: 18px;
-            color: #d2d2d2;
+            font-size: 20px;
+            color: #dcdcdc;
             font-family: sans-serif;
             white-space: pre-wrap;
             line-height: 1.35;
@@ -306,8 +367,8 @@
         .modal {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
-            width: 700px;
-            max-height: 80vh;
+            width: 720px;
+            max-height: 85vh;
             border-radius: 10px;
             display: flex;
             flex-direction: column;
@@ -350,6 +411,7 @@
                 <button onclick="addVersion()">+ Add Version</button>
                 <button class="secondary" onclick="openExportModal()">Export Lua</button>
                 <button class="secondary" onclick="openImportModal()">Import Lua</button>
+                <button class="danger" onclick="resetDefaults()" title="Reset to default changelog data">Reset</button>
             </div>
         </div>
         <div class="editor-content" id="editorContent">
@@ -377,7 +439,7 @@
             </div>
             <div class="modal-body">
                 <p id="modalDesc" style="color: var(--text-muted); font-size: 13px;">Copy the generated script below and paste it directly into Roblox Studio:</p>
-                <textarea id="luaCodeBox" style="height: 350px; font-family: monospace;" readonly></textarea>
+                <textarea id="luaCodeBox" style="height: 360px; font-family: monospace;" readonly></textarea>
             </div>
             <div class="modal-footer" id="modalFooter">
                 <button onclick="copyLuaCode()">Copy to Clipboard</button>
@@ -387,7 +449,7 @@
     </div>
 
 <script>
-let versionData = [
+const DEFAULT_VERSION_DATA = [
 	{
 		Tab: "v0.1",
 		Patches: [
@@ -400,7 +462,7 @@ let versionData = [
 	{
 		Tab: "v0.2",
 		Patches: [
-			{ Header: "v0.2 BIG update 26.08.26", Body: "- Added level system\n- Hacklord now respawns and gets a slight buff to all of his stats when he respawns:\n  WalkSpeed: +10%\n  Entanglement Damage: +10%\nBalance changes:\n  Entanglement damage 25>10\n  Hacklord walkspeed 19>18\n- Added more qol stuff" }
+			{ Header: "v0.2 BIG update 26.08.26", Body: "- Added level system\n- Hacklord now respawns and gets a slight buff to all of his stats when he respawns:\n  WalkSpeed: +10%\n  Entanglement Damage: +10%\n<b><font size=\"24\" color=\"#FFCC4D\">BALANCE CHANGES:</font></b>\n  Entanglement damage 25>10\n  Hacklord walkspeed 19>18\n- Added more qol stuff" }
 		]
 	},
 	{
@@ -420,33 +482,76 @@ let versionData = [
 	{
 		Tab: "v0.5",
 		Patches: [
-			{ Header: "v0.5 15.09.26", Body: "- Nerfed most of the enemies to make the gameplay better\n- Added a new upgrade (broken rn)\n(its been a long time huh)" }
+			{ Header: "v0.5 15.09.26", Body: "- Nerfed most of the enemies to make the gameplay better\n- Added a new upgrade \n(its been a long time )" }
 		]
 	},
 	{
 		Tab: "v0.6",
 		Patches: [
-			{ Header: "v0.6 21.09.26", Body: "- QOL changes\n- New speed meter" }
+			{ Header: "v0.6 21.09.26", Body: "- QOL changes\n- New speed meter" },
+			{ Header: "v0.6.2   14.10.26", Body: "- Fixed some sounds being too loud\n- Hacklord's ability now cancels your dash when hit and locks it for a few seconds\n- New Dash cooldown UI " }
+		]
+	},
+	{
+		Tab: "v0.7",
+		Patches: [
+			{ Header: "v0.7 - THE COLLAPSE UPDATE", Body: "- Added Collapse (real)\n- Rearranged some of the UI" },
+			{ Header: "v0.7.1   28.10.26", Body: "- QOL changes\n- Added team colors to the leaderboard\n- Sprinting now gains momentum instead of adding the speed instantly" }
+		]
+	},
+	{
+		Tab: "v0.8",
+		Patches: [
+			{ Header: "v0.8 31.10.26", Body: "- Added the chosen stuff hud \n- lots of new upgrades\n- Rearranged the uis (once again)\n- Added a gift counter for golden gifts \n- Shootlord's orbs have a trail and disappear correctly when the round ends\n- Evil sacry now deals 20% of the player's hp and triggers a jumpscare instead of killing instantly on contact (the jumpscare lasts 1.25s, will change in future) \n- Added turn tiles\n- Optimized most of the enemies (game will still lag on later levels, will fix)\n- Added a heal pad in the lobby " },
+			{ Header: "v0.8.1 02.11.26", Body: "Small Halloween update\n- Bring the pumpkin 15 treats to get a limited badge \n- Expanded the lobby \n- Fixed the map being too bright " },
+			{ Header: "v0.8.2 08.11.26", Body: "- Added vfx to gifts\n- Ghost's appearance got updated\n- Fixed the air control upgrade \n- Added new upgrades \n- New voidbird explosion vfx\n- Added camera sway\n- Fixed upgrades not appearing on the HUD \n- removed herobrine." },
+			{ Header: "v0.8.3 11.11.26", Body: "- Added beacon and dash vfx\n- Fixed \"hacklord's\" ability not appearing sometimes\n<b><font size=\"24\" color=\"#55FF7F\">NEW:</font></b>\n- Change how long the gift collect popup lasts for\n- Some more bug fixes i dont wanna list here" }
+		]
+	},
+	{
+		Tab: "v0.9",
+		Patches: [
+			{ Header: "v0.9", Body: "<b><font size=\"24\" color=\"#55FF7F\">NEW:</font></b>\n- Added new LEVEL system (Max is 100)\n- Added curses (3)\n- Optimized the game\n- added 2 new upgrades (12)" },
+			{ Header: "v0.9.0.1 19.11.26 (gta released yay)", Body: "- Added Minesweeper" }
 		]
 	}
 ];
 
+let versionData = JSON.parse(JSON.stringify(DEFAULT_VERSION_DATA));
 let activeTab = versionData.length > 0 ? versionData[versionData.length - 1].Tab : "";
 
+const TAG_TEMPLATES = {
+    new: '<b><font size="24" color="#55FF7F">NEW:</font></b>\n- ',
+    fix: '<b><font size="24" color="#FF5555">FIX:</font></b>\n- ',
+    balance: '<b><font size="24" color="#FFCC4D">BALANCE CHANGES:</font></b>\n- ',
+    bullet: '- '
+};
+
 function loadFromStorage() {
-    const saved = localStorage.getItem('roblox_changelog_data');
+    const saved = localStorage.getItem('roblox_changelog_data_v2');
     if (saved) {
         try {
-            versionData = JSON.parse(saved);
-            if (versionData.length > 0 && !versionData.some(v => v.Tab === activeTab)) {
-                activeTab = versionData[versionData.length - 1].Tab;
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                versionData = parsed;
+                if (!versionData.some(v => v.Tab === activeTab)) {
+                    activeTab = versionData[versionData.length - 1].Tab;
+                }
             }
         } catch(e) { console.error(e); }
     }
 }
 
 function saveToStorage() {
-    localStorage.setItem('roblox_changelog_data', JSON.stringify(versionData));
+    localStorage.setItem('roblox_changelog_data_v2', JSON.stringify(versionData));
+}
+
+function resetDefaults() {
+    if (confirm("Reset all versions back to the default changelog?")) {
+        versionData = JSON.parse(JSON.stringify(DEFAULT_VERSION_DATA));
+        activeTab = versionData[versionData.length - 1].Tab;
+        render();
+    }
 }
 
 function render() {
@@ -465,10 +570,18 @@ function renderEditor() {
 
         let patchesHtml = '';
         verGroup.Patches.forEach((patch, pIdx) => {
+            const taId = `ta_${vIdx}_${pIdx}`;
             patchesHtml += `
                 <div class="patch-item">
-                    <input type="text" value="${escapeHtml(patch.Header)}" placeholder="Patch Header (e.g. v0.1.1)" oninput="updatePatch(${vIdx}, ${pIdx}, 'Header', this.value)">
-                    <textarea placeholder="Patch body bullets..." oninput="updatePatch(${vIdx}, ${pIdx}, 'Body', this.value)">${escapeHtml(patch.Body)}</textarea>
+                    <input type="text" value="${escapeHtml(patch.Header)}" placeholder="Patch Header (e.g. v0.9.1)" oninput="updatePatch(${vIdx}, ${pIdx}, 'Header', this.value)">
+                    <div class="tag-toolbar">
+                        <span>Insert:</span>
+                        <button type="button" class="tag-btn tag-new" onclick="insertTag(${vIdx}, ${pIdx}, 'new')">+ NEW</button>
+                        <button type="button" class="tag-btn tag-fix" onclick="insertTag(${vIdx}, ${pIdx}, 'fix')">+ FIX</button>
+                        <button type="button" class="tag-btn tag-balance" onclick="insertTag(${vIdx}, ${pIdx}, 'balance')">+ BALANCE</button>
+                        <button type="button" class="tag-btn tag-bullet" onclick="insertTag(${vIdx}, ${pIdx}, 'bullet')">+ Bullet</button>
+                    </div>
+                    <textarea id="${taId}" placeholder="Patch body bullets..." oninput="updatePatch(${vIdx}, ${pIdx}, 'Body', this.value)">${escapeHtml(patch.Body)}</textarea>
                     <div class="patch-actions">
                         <button class="danger" style="padding: 4px 10px; font-size: 11px;" onclick="deletePatch(${vIdx}, ${pIdx})">Delete Patch</button>
                     </div>
@@ -478,7 +591,7 @@ function renderEditor() {
 
         card.innerHTML = `
             <div class="version-header-row">
-                <input type="text" value="${escapeHtml(verGroup.Tab)}" placeholder="Version Tab Name (e.g. v0.7)" oninput="updateVersionTab(${vIdx}, this.value)" style="font-weight: bold; font-size: 15px;">
+                <input type="text" value="${escapeHtml(verGroup.Tab)}" placeholder="Version Tab Name (e.g. v1.0)" oninput="updateVersionTab(${vIdx}, this.value)" style="font-weight: bold; font-size: 15px;">
                 <button class="danger" onclick="deleteVersion(${vIdx})">Delete Version</button>
             </div>
             <div class="patch-list">
@@ -488,6 +601,49 @@ function renderEditor() {
         `;
         container.appendChild(card);
     });
+}
+
+function insertTag(vIdx, pIdx, type) {
+    const ta = document.getElementById(`ta_${vIdx}_${pIdx}`);
+    const snippet = TAG_TEMPLATES[type];
+    if (!ta) return;
+
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const val = ta.value;
+
+    // Add a newline before the tag if inserting mid-line
+    const needsLeadingNewline = start > 0 && val[start - 1] !== '\n';
+    const insertion = (needsLeadingNewline ? '\n' : '') + snippet;
+
+    const newVal = val.substring(0, start) + insertion + val.substring(end);
+    ta.value = newVal;
+    versionData[vIdx].Patches[pIdx].Body = newVal;
+
+    saveToStorage();
+    renderPreview();
+
+    ta.focus();
+    const newCursor = start + insertion.length;
+    ta.setSelectionRange(newCursor, newCursor);
+}
+
+// Safely renders Roblox RichText <b> and <font size="..." color="..."> tags in the HTML preview
+function formatRichTextPreview(rawText) {
+    // Escape HTML first, then re-allow safe <b> and <font> tags used by Roblox RichText
+    let html = escapeHtml(rawText);
+    html = html.replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/gi, '<b>$1</b>');
+    html = html.replace(
+        /&lt;font(?:\s+size=&quot;(\d+)&quot;)?(?:\s+color=&quot;(#[0-9a-fA-F]{6})&quot;)?(?:\s+size=&quot;(\d+)&quot;)?&gt;([\s\S]*?)&lt;\/font&gt;/gi,
+        (match, s1, color, s2, inner) => {
+            const size = s1 || s2;
+            let style = '';
+            if (size) style += `font-size:${size}px;`;
+            if (color) style += `color:${color};`;
+            return `<span style="${style}">${inner}</span>`;
+        }
+    );
+    return html;
 }
 
 function renderPreview() {
@@ -516,12 +672,18 @@ function renderPreview() {
                 group.className = 'roblox-patch-group';
                 group.innerHTML = `
                     <div class="roblox-patch-header">${escapeHtml(patch.Header)}</div>
-                    <div class="roblox-patch-body">${escapeHtml(patch.Body)}</div>
+                    <div class="roblox-patch-body">${formatRichTextPreview(patch.Body)}</div>
                 `;
                 contentScroll.appendChild(group);
             });
         }
     });
+
+    // Auto-scroll preview tab bar to active tab
+    const activeBtn = tabNav.querySelector('.active');
+    if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
 }
 
 function addVersion() {
@@ -529,11 +691,13 @@ function addVersion() {
     versionData.push({
         Tab: newName,
         Patches: [
-            { Header: newName, Body: "- New update changes here" }
+            { Header: newName, Body: '<b><font size="24" color="#55FF7F">NEW:</font></b>\n- New update changes here' }
         ]
     });
     activeTab = newName;
     render();
+    const editor = document.getElementById('editorContent');
+    editor.scrollTop = editor.scrollHeight;
 }
 
 function deleteVersion(vIdx) {
@@ -547,8 +711,9 @@ function deleteVersion(vIdx) {
 }
 
 function updateVersionTab(vIdx, val) {
+    const oldTab = versionData[vIdx].Tab;
     versionData[vIdx].Tab = val;
-    if (versionData[vIdx].Tab === activeTab || !versionData.some(v => v.Tab === activeTab)) {
+    if (oldTab === activeTab || !versionData.some(v => v.Tab === activeTab)) {
         activeTab = val;
     }
     saveToStorage();
@@ -588,10 +753,10 @@ function generateLuaTable() {
     let lua = "local versionData = {\n";
     versionData.forEach((vGroup, i) => {
         lua += `\t{\n`;
-        lua += `\t\tTab = "${vGroup.Tab}",\n`;
+        lua += `\t\tTab = "${vGroup.Tab.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}",\n`;
         lua += `\t\tPatches = {\n`;
         vGroup.Patches.forEach((patch, j) => {
-            const escapedHeader = patch.Header.replace(/"/g, '\\"');
+            const escapedHeader = patch.Header.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
             const escapedBody = patch.Body.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
             lua += `\t\t\t{ Header = "${escapedHeader}", Body = "${escapedBody}" }`;
             if (j < vGroup.Patches.length - 1) lua += ",";
@@ -608,7 +773,7 @@ function generateLuaTable() {
 
 function getFullLuaScript() {
     const tableStr = generateLuaTable();
-    return `-- Auto-generated SurfaceGui Recreator with re-indexed version numbers
+    return `-- Auto-generated SurfaceGui Recreator with RichText section tags
 local SoundService = game:GetService("SoundService")
 
 local inst_1 = Instance.new("SurfaceGui")
@@ -642,17 +807,17 @@ local inst_3 = Instance.new("Frame")
 inst_3.Name = "Header"
 inst_3.BackgroundTransparency = 1
 inst_3.Position = UDim2.new(0, 0, 0, 0)
-inst_3.Size = UDim2.new(1, 0, 0, 50)
+inst_3.Size = UDim2.new(1, 0, 0, 56)
 inst_3.Parent = inst_2
 
 local inst_4 = Instance.new("TextLabel")
 inst_4.Name = "Title"
 inst_4.BackgroundTransparency = 1
 inst_4.Position = UDim2.new(0, 10, 0, 0)
-inst_4.Size = UDim2.new(0, 200, 1, 0)
+inst_4.Size = UDim2.new(0, 210, 1, 0)
 inst_4.Text = "CHANGELOGS"
 inst_4.TextColor3 = Color3.fromRGB(255, 255, 255)
-inst_4.TextSize = 28
+inst_4.TextSize = 32
 inst_4.Font = Enum.Font.SourceSans
 inst_4.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
 inst_4.TextXAlignment = Enum.TextXAlignment.Left
@@ -661,9 +826,9 @@ inst_4.Parent = inst_3
 local inst_5 = Instance.new("ScrollingFrame")
 inst_5.Name = "TabNav"
 inst_5.BackgroundTransparency = 1
-inst_5.Position = UDim2.new(0, 210, 0, 8)
-inst_5.Size = UDim2.new(1, -220, 1, -16)
-inst_5.ScrollBarThickness = 6
+inst_5.Position = UDim2.new(0, 225, 0, 8)
+inst_5.Size = UDim2.new(1, -235, 1, -16)
+inst_5.ScrollBarThickness = 8
 inst_5.CanvasSize = UDim2.new(0, 0, 0, 0)
 inst_5.ClipsDescendants = true
 inst_5.Parent = inst_3
@@ -672,15 +837,15 @@ local inst_6 = Instance.new("UIListLayout")
 inst_6.Name = "TabLayout"
 inst_6.FillDirection = Enum.FillDirection.Horizontal
 inst_6.SortOrder = Enum.SortOrder.LayoutOrder
-inst_6.Padding = UDim.new(0, 4)
+inst_6.Padding = UDim.new(0, 5)
 inst_6.Parent = inst_5
 
 local inst_7 = Instance.new("ScrollingFrame")
 inst_7.Name = "ContentScroll"
 inst_7.BackgroundTransparency = 1
-inst_7.Position = UDim2.new(0, 10, 0, 55)
-inst_7.Size = UDim2.new(1, -20, 1, -65)
-inst_7.ScrollBarThickness = 8
+inst_7.Position = UDim2.new(0, 10, 0, 62)
+inst_7.Size = UDim2.new(1, -20, 1, -72)
+inst_7.ScrollBarThickness = 12
 inst_7.CanvasSize = UDim2.new(0, 0, 0, 0)
 inst_7.ClipsDescendants = true
 inst_7.Parent = inst_2
@@ -696,120 +861,128 @@ ${tableStr}
 local tabs = {}
 
 local function updateScrollCanvas()
-	inst_7.CanvasSize = UDim2.new(0, 0, 0, inst_8.AbsoluteContentSize.Y + 20)
+\tinst_7.CanvasSize = UDim2.new(0, 0, 0, inst_8.AbsoluteContentSize.Y + 24)
 end
 
 inst_8:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateScrollCanvas)
 
 inst_6:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	inst_5.CanvasSize = UDim2.new(0, inst_6.AbsoluteContentSize.X + 10, 0, 0)
+\tinst_5.CanvasSize = UDim2.new(0, inst_6.AbsoluteContentSize.X + 10, 0, 0)
 end)
 
 local function switchTab(selectedVersion, playAudio)
-	if playAudio then
-		tabSound:Play()
-	end
+\tif playAudio then
+\t\ttabSound:Play()
+\tend
 
-	for ver, data in pairs(tabs) do
-		local isTarget = (ver == selectedVersion)
-		data.Frame.Visible = isTarget
+\tinst_7.CanvasPosition = Vector2.new(0, 0)
 
-		if isTarget then
-			data.Button.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-			data.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
-		else
-			data.Button.BackgroundColor3 = Color3.fromRGB(134, 134, 134)
-			data.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-		end
-	end
-	task.defer(updateScrollCanvas)
+\tfor ver, data in pairs(tabs) do
+\t\tlocal isTarget = (ver == selectedVersion)
+\t\tdata.Frame.Visible = isTarget
+
+\t\tif isTarget then
+\t\t\tdata.Button.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+\t\t\tdata.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+\t\telse
+\t\t\tdata.Button.BackgroundColor3 = Color3.fromRGB(134, 134, 134)
+\t\t\tdata.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+\t\tend
+\tend
+\ttask.defer(updateScrollCanvas)
 end
 
 for i, verGroup in ipairs(versionData) do
-	local mainVer = verGroup.Tab
-	local patches = verGroup.Patches
+\tlocal mainVer = verGroup.Tab
+\tlocal patches = verGroup.Patches
 
-	local inst_btn = Instance.new("TextButton")
-	inst_btn.Name = "Tab_" .. i
-	inst_btn.Size = UDim2.new(0, 80, 1, 0)
-	inst_btn.BackgroundColor3 = Color3.fromRGB(134, 134, 134)
-	inst_btn.BorderSizePixel = 0
-	inst_btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	inst_btn.Text = mainVer
-	inst_btn.Font = Enum.Font.SourceSans
-	inst_btn.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
-	inst_btn.TextSize = 22
-	inst_btn.AutoButtonColor = true
-	inst_btn.Active = true
-	inst_btn.Parent = inst_5
+\tlocal inst_btn = Instance.new("TextButton")
+\tinst_btn.Name = "Tab_" .. i
+\tinst_btn.Size = UDim2.new(0, 90, 1, 0)
+\tinst_btn.BackgroundColor3 = Color3.fromRGB(134, 134, 134)
+\tinst_btn.BorderSizePixel = 0
+\tinst_btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+\tinst_btn.Text = mainVer
+\tinst_btn.Font = Enum.Font.SourceSans
+\tinst_btn.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+\tinst_btn.TextSize = 24
+\tinst_btn.AutoButtonColor = true
+\tinst_btn.Active = true
+\tinst_btn.Parent = inst_5
 
-	local inst_frame = Instance.new("Frame")
-	inst_frame.Name = "VersionFrame_" .. i
-	inst_frame.Size = UDim2.new(1, -16, 0, 0)
-	inst_frame.AutomaticSize = Enum.AutomaticSize.Y
-	inst_frame.BackgroundTransparency = 1
-	inst_frame.Visible = false
-	inst_frame.LayoutOrder = i
-	inst_frame.Parent = inst_7
+\tlocal inst_frame = Instance.new("Frame")
+\tinst_frame.Name = "VersionFrame_" .. i
+\tinst_frame.Size = UDim2.new(1, -18, 0, 0)
+\tinst_frame.AutomaticSize = Enum.AutomaticSize.Y
+\tinst_frame.BackgroundTransparency = 1
+\tinst_frame.Visible = false
+\tinst_frame.LayoutOrder = i
+\tinst_frame.Parent = inst_7
 
-	local inst_textLayout = Instance.new("UIListLayout")
-	inst_textLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	inst_textLayout.Padding = UDim.new(0, 12)
-	inst_textLayout.Parent = inst_frame
+\tlocal inst_textLayout = Instance.new("UIListLayout")
+\tinst_textLayout.SortOrder = Enum.SortOrder.LayoutOrder
+\tinst_textLayout.Padding = UDim.new(0, 14)
+\tinst_textLayout.Parent = inst_frame
 
-	for _, patch in ipairs(patches) do
-		local patchGroup = Instance.new("Frame")
-		patchGroup.Name = "PatchGroup"
-		patchGroup.Size = UDim2.new(1, 0, 0, 0)
-		patchGroup.AutomaticSize = Enum.AutomaticSize.Y
-		patchGroup.BackgroundTransparency = 1
-		patchGroup.Parent = inst_frame
+\tfor _, patch in ipairs(patches) do
+\t\tlocal patchGroup = Instance.new("Frame")
+\t\tpatchGroup.Name = "PatchGroup"
+\t\tpatchGroup.Size = UDim2.new(1, 0, 0, 0)
+\t\tpatchGroup.AutomaticSize = Enum.AutomaticSize.Y
+\t\tpatchGroup.BackgroundTransparency = 1
+\t\tpatchGroup.Parent = inst_frame
 
-		local patchLayout = Instance.new("UIListLayout")
-		patchLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		patchLayout.Padding = UDim.new(0, 4)
-		patchLayout.Parent = patchGroup
+\t\tlocal patchLayout = Instance.new("UIListLayout")
+\t\tpatchLayout.SortOrder = Enum.SortOrder.LayoutOrder
+\t\tpatchLayout.Padding = UDim.new(0, 4)
+\t\tpatchLayout.Parent = patchGroup
 
-		local inst_headerLabel = Instance.new("TextLabel")
-		inst_headerLabel.Name = "HeaderLabel"
-		inst_headerLabel.Size = UDim2.new(1, 0, 0, 24)
-		inst_headerLabel.BackgroundTransparency = 1
-		inst_headerLabel.Text = patch.Header
-		inst_headerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		inst_headerLabel.TextSize = 22
-		inst_headerLabel.Font = Enum.Font.SourceSans
-		inst_headerLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-		inst_headerLabel.TextXAlignment = Enum.TextXAlignment.Left
-		inst_headerLabel.Parent = patchGroup
+\t\tlocal inst_headerLabel = Instance.new("TextLabel")
+\t\tinst_headerLabel.Name = "HeaderLabel"
+\t\tinst_headerLabel.Size = UDim2.new(1, 0, 0, 0)
+\t\tinst_headerLabel.AutomaticSize = Enum.AutomaticSize.Y
+\t\tinst_headerLabel.BackgroundTransparency = 1
+\t\tinst_headerLabel.Text = patch.Header
+\t\tinst_headerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+\t\tinst_headerLabel.TextSize = 26
+\t\tinst_headerLabel.Font = Enum.Font.SourceSans
+\t\tinst_headerLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+\t\tinst_headerLabel.TextXAlignment = Enum.TextXAlignment.Left
+\t\tinst_headerLabel.TextWrapped = true
+\t\tinst_headerLabel.Parent = patchGroup
 
-		local inst_bodyLabel = Instance.new("TextLabel")
-		inst_bodyLabel.Name = "BodyLabel"
-		inst_bodyLabel.Size = UDim2.new(1, 0, 0, 0)
-		inst_bodyLabel.AutomaticSize = Enum.AutomaticSize.Y
-		inst_bodyLabel.BackgroundTransparency = 1
-		inst_bodyLabel.Text = patch.Body
-		inst_bodyLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
-		inst_bodyLabel.TextSize = 18
-		inst_bodyLabel.Font = Enum.Font.SourceSans
-		inst_bodyLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
-		inst_bodyLabel.TextXAlignment = Enum.TextXAlignment.Left
-		inst_bodyLabel.TextYAlignment = Enum.TextYAlignment.Top
-		inst_bodyLabel.TextWrapped = true
-		inst_bodyLabel.Parent = patchGroup
-	end
+\t\tlocal inst_bodyLabel = Instance.new("TextLabel")
+\t\tinst_bodyLabel.Name = "BodyLabel"
+\t\tinst_bodyLabel.Size = UDim2.new(1, 0, 0, 0)
+\t\tinst_bodyLabel.AutomaticSize = Enum.AutomaticSize.Y
+\t\tinst_bodyLabel.BackgroundTransparency = 1
+\t\tinst_bodyLabel.RichText = true
+\t\tinst_bodyLabel.Text = patch.Body
+\t\tinst_bodyLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+\t\tinst_bodyLabel.TextSize = 20
+\t\tinst_bodyLabel.Font = Enum.Font.SourceSans
+\t\tinst_bodyLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+\t\tinst_bodyLabel.TextXAlignment = Enum.TextXAlignment.Left
+\t\tinst_bodyLabel.TextYAlignment = Enum.TextYAlignment.Top
+\t\tinst_bodyLabel.TextWrapped = true
+\t\tinst_bodyLabel.Parent = patchGroup
+\tend
 
-	tabs[mainVer] = {
-		Button = inst_btn,
-		Frame = inst_frame
-	}
+\ttabs[mainVer] = {
+\t\tButton = inst_btn,
+\t\tFrame = inst_frame
+\t}
 
-	inst_btn.MouseButton1Click:Connect(function()
-		switchTab(mainVer, true)
-	end)
+\tinst_btn.MouseButton1Click:Connect(function()
+\t\tswitchTab(mainVer, true)
+\tend)
 end
 
 if #versionData > 0 then
-	switchTab(versionData[#versionData].Tab, false)
+\tswitchTab(versionData[#versionData].Tab, false)
+\ttask.defer(function()
+\t\tinst_5.CanvasPosition = Vector2.new(inst_6.AbsoluteContentSize.X, 0)
+\tend)
 end`;
 }
 
@@ -857,13 +1030,19 @@ function processImport() {
             return;
         }
         
-        let cleaned = match[1]
+        // Safely extract strings while converting Luau table keys to JSON
+        const strings = [];
+        let tokenized = match[1]
             .replace(/--.*$/gm, '')
+            .replace(/"((?:\\.|[^"\\])*)"/g, (_, inner) => {
+                strings.push(inner);
+                return `__STR_${strings.length - 1}__`;
+            })
             .replace(/([a-zA-Z0-9_]+)\s*=/g, '"$1":')
-            .replace(/'/g, '"')
-            .replace(/,\s*([\]\}])/g, '$1');
+            .replace(/,\s*([\]\}])/g, '$1')
+            .replace(/__STR_(\d+)__/g, (_, idx) => `"${strings[Number(idx)]}"`);
 
-        const parsed = JSON.parse(cleaned);
+        const parsed = JSON.parse(tokenized);
         if (Array.isArray(parsed)) {
             versionData = parsed;
             if (versionData.length > 0) activeTab = versionData[versionData.length - 1].Tab;
