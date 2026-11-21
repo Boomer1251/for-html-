@@ -29,10 +29,11 @@ tbody tr:hover{background:#242424}
 .trait-desc{color:var(--mut);font-size:11px;margin-bottom:8px;min-height:28px;background:#181818;padding:5px 7px;border:1px solid #2b2b2b}
 .rating{color:var(--gold);font-size:12px;margin-left:6px}
 label{font-size:11px;color:var(--mut);display:block;margin-bottom:2px}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}.row>div{flex:1;min-width:150px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;align-items:flex-end}.row>div{flex:1;min-width:140px}
 .scroll{overflow-x:auto}
 .comp-table th,.comp-table td{font-size:11px;padding:6px;white-space:nowrap}
 .comp-table th{cursor:pointer;user-select:none;position:sticky;top:0}.comp-table th:hover{background:#333}
+.comp-table tbody tr{cursor:pointer}
 .comp-table tr.active-row{background:#1b2b1b}
 .best-cell{background:#1b2e1b;color:var(--hi);font-weight:bold}
 .sort-arrow{font-size:10px;margin-left:3px;color:#666}.sort-arrow.active{color:var(--hi)}
@@ -40,9 +41,10 @@ label{font-size:11px;color:var(--mut);display:block;margin-bottom:2px}
 .pill{color:var(--gold)}
 .sub-odds{color:#777;font-size:10px;margin-left:4px}
 .delta{font-size:10px;margin-left:4px}
-.check-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:#ccc;cursor:pointer;user-select:none;height:31px}
+.check-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:#ccc;cursor:pointer;user-select:none;height:31px;margin-bottom:8px}
 .check-wrap input{width:auto;margin:0;accent-color:var(--hi)}
 .empty{color:var(--mut);padding:20px;text-align:center;border:1px dashed var(--line)}
+.hint{color:#777;font-size:11px;margin-bottom:8px}
 #hoverTrait{position:fixed;pointer-events:none;z-index:9999;display:none;background:var(--panel);color:var(--hi);border:1px solid var(--hi);padding:2px 7px;font:bold 11px monospace;white-space:nowrap}
 </style>
 </head>
@@ -104,10 +106,15 @@ label{font-size:11px;color:var(--mut);display:block;margin-bottom:2px}
     </div>
     <div id="trait1Group" style="display:none"><label>Trait 1</label><select id="compTrait1" onchange="renderComparison()"></select></div>
     <div id="trait2Group" style="display:none"><label>Trait 2</label><select id="compTrait2" onchange="renderComparison()"></select></div>
-    <div style="flex:0 0 auto;min-width:160px"><label>&nbsp;</label>
+    <div><label id="simLabel">Waves to Simulate</label><input id="simCount" type="number" min="1" max="999" value="10" oninput="renderComparison()"></div>
+    <div style="flex:0 0 auto;min-width:140px">
       <label class="check-wrap"><input type="checkbox" id="hiBest" checked onchange="renderComparison()">Highlight Best</label>
     </div>
+    <div style="flex:0 0 auto;min-width:130px">
+      <button id="copyCsvBtn" onclick="copyCompareCsv()" style="margin-bottom:8px">Copy CSV</button>
+    </div>
   </div>
+  <div class="hint">Click a trait row to equip it on the Tower card. Keys 1-3 switch tabs.</div>
   <div class="scroll" id="compareResults"></div>
 </div>
 
@@ -201,6 +208,7 @@ const compareColumns = {
     ["totalCostAll","Cost (All)",d=>`$${d.totalCostAll.toLocaleString()}`,"min"],
     ["maxLevelBonusOne","Bonus (1)",d=>`+$${d.maxLevelBonusOne.toLocaleString()}`,"max"],
     ["maxLevelBonusAll","Bonus (All)",d=>`+$${d.maxLevelBonusAll.toLocaleString()}`,"max"],
+    ["netSimAll",d=>`Net (${d.simCount}w)`,d=>`${d.netSimAll>=0?'+':''}$${d.netSimAll.toLocaleString()}`,"max"],
     ["incomePer1k","Income/$1k",d=>`$${fmt(d.incomePer1k)}`,"max"],
     ["paybackCyclesOne","Payback",d=>d.paybackCyclesOne===999999?'N/A':`${d.paybackCyclesOne.toFixed(2)}w`,"min"]
   ],
@@ -214,13 +222,14 @@ const compareColumns = {
     ["spawnCd","Spawn CD",d=>`${fmt(d.spawnCd)}s`,"min"],
     ["cannonDpsOne","Cannon DPS (1)",d=>fmt(d.cannonDpsOne),"max"],
     ["totalDpsAll","Combined DPS (All)",d=>fmt(d.totalDpsAll),"max"],
+    ["simDps",d=>`DPS (${d.simCount}x)`,d=>fmt(d.simDps),"max"],
     ["dpsPer1k","DPS/$1k",d=>fmt(d.dpsPer1k),"max"],
     ["cannonRange","Range",d=>`${fmt(d.cannonRange)}m`,"max"],
     ["cannonBlast","Blast",d=>`${fmt(d.cannonBlast)}m`,"max"]
   ]
 };
 
-let currentTowerName = "Tycoon", sortKey = null, sortAsc = true;
+let currentTowerName = "Tycoon", sortKey = null, sortAsc = true, lastCompareRows = [];
 const fmt = n => parseFloat(n.toFixed(2)).toLocaleString();
 const slug = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 const oneIn = ch => {
@@ -249,6 +258,15 @@ document.addEventListener('mousemove', (e) => {
 });
 window.addEventListener('scroll', hideHoverBadge, true);
 
+/* ---------- KEYBOARD SHORTCUTS ---------- */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { hideHoverBadge(); return; }
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
+  const map = { '1': 'towers', '2': 'traits', '3': 'compare' };
+  if (map[e.key]) showTab(map[e.key]);
+});
+
 function saveState() {
   try {
     const selected = {};
@@ -259,7 +277,8 @@ function saveState() {
     localStorage.setItem('td_lib_state', JSON.stringify({
       tab: document.querySelector('.tab.active')?.dataset.tab || 'towers',
       selected,
-      compTower: document.getElementById('compTower')?.value
+      compTower: document.getElementById('compTower')?.value,
+      simCount: document.getElementById('simCount')?.value
     }));
   } catch (e) {}
 }
@@ -321,6 +340,16 @@ function buildCards() {
     for (const t in traits) select.add(new Option(`${t} (${traits[t].chance})`, t));
     if (saved[name] && traits[saved[name]]) select.value = saved[name];
     updateCard(name);
+  }
+}
+
+function setCardTrait(towerName, traitName) {
+  const sel = document.getElementById(`${slug(towerName)}-trait`);
+  if (!sel) return;
+  if ([...sel.options].some(o => o.value === traitName)) {
+    sel.value = traitName;
+    updateCard(towerName);
+    saveState();
   }
 }
 
@@ -392,8 +421,9 @@ function renderTraits() {
 function initCompareTab() {
   const sel = document.getElementById('compTower');
   for (const n in baseTowers) sel.add(new Option(n, n));
-  const savedTower = loadState().compTower;
-  if (savedTower && baseTowers[savedTower]) sel.value = savedTower;
+  const saved = loadState();
+  if (saved.compTower && baseTowers[saved.compTower]) sel.value = saved.compTower;
+  if (saved.simCount) document.getElementById('simCount').value = saved.simCount;
   populateCompare();
 }
 
@@ -409,6 +439,8 @@ function openCompare(name) {
 
 function populateCompare() {
   currentTowerName = document.getElementById('compTower').value;
+  const tower = baseTowers[currentTowerName];
+  document.getElementById('simLabel').textContent = tower.type === 'income' ? 'Waves to Simulate' : 'Unit Count to Sim';
   sortKey = null; sortAsc = true;
   const traits = getTraitsForTower(currentTowerName), keys = Object.keys(traits);
   ['compTrait1', 'compTrait2'].forEach(id => {
@@ -416,7 +448,7 @@ function populateCompare() {
     s.innerHTML = '';
     keys.forEach(t => s.add(new Option(`${t} (${traits[t].chance})`, t)));
   });
-  const defs = baseTowers[currentTowerName].defaultCompare || [];
+  const defs = tower.defaultCompare || [];
   if (keys.includes(defs[0])) document.getElementById('compTrait1').value = defs[0];
   if (keys.includes(defs[1])) document.getElementById('compTrait2').value = defs[1];
   saveState();
@@ -428,7 +460,7 @@ function toggleSort(key) {
   renderComparison();
 }
 
-function getTowerTraitMetrics(towerName, traitKey) {
+function getTowerTraitMetrics(towerName, traitKey, simCount) {
   const tower = baseTowers[towerName], trait = globalTraits[traitKey];
   const limit = tower.baseLimit + trait.limitAdd;
   let totalCostOne = 0;
@@ -436,7 +468,7 @@ function getTowerTraitMetrics(towerName, traitKey) {
   const totalCostAll = totalCostOne * limit;
   let numChance = parseFloat(trait.chance.replace('%', ''));
   if (isNaN(numChance)) numChance = -1;
-  const base = { traitName: traitKey, chance: trait.chance, numChance, limit, totalCostOne, totalCostAll };
+  const base = { traitName: traitKey, chance: trait.chance, numChance, limit, totalCostOne, totalCostAll, simCount };
   const last = tower.levels[tower.levels.length - 1];
 
   if (tower.type === "income") {
@@ -446,6 +478,7 @@ function getTowerTraitMetrics(towerName, traitKey) {
       ...base,
       maxLevelBonusOne: b,
       maxLevelBonusAll,
+      netSimAll: (maxLevelBonusAll * simCount) - totalCostAll,
       incomePer1k: totalCostOne > 0 ? (b / totalCostOne) * 1000 : 0,
       paybackCyclesOne: b > 0 ? totalCostOne / b : 999999
     };
@@ -453,13 +486,15 @@ function getTowerTraitMetrics(towerName, traitKey) {
   const c = tower.cannon;
   const cannonDamage = c.damage * trait.dmg, cannonCd = c.cooldown * trait.cd;
   const cannonDpsOne = cannonDamage / cannonCd, ramDpsOne = last.dps * trait.dmg;
-  const totalDpsAll = (ramDpsOne + cannonDpsOne) * limit;
+  const totalDpsOne = ramDpsOne + cannonDpsOne;
+  const totalDpsAll = totalDpsOne * limit;
   return {
     ...base,
     ramDpsOne,
     spawnCd: last.cd * trait.cd,
     cannonDpsOne,
     totalDpsAll,
+    simDps: totalDpsOne * simCount,
     dpsPer1k: totalCostAll > 0 ? (totalDpsAll / totalCostAll) * 1000 : 0,
     cannonRange: c.range * trait.range,
     cannonBlast: c.explosion * trait.blast
@@ -470,17 +505,22 @@ function renderComparison() {
   hideHoverBadge();
   const two = document.getElementById('compMode').value === 'two';
   const hiBest = document.getElementById('hiBest').checked;
+  const rawSim = parseInt(document.getElementById('simCount').value, 10);
+  const simCount = isNaN(rawSim) || rawSim < 1 ? 1 : rawSim;
+  saveState();
+
   document.getElementById('trait1Group').style.display = two ? 'block' : 'none';
   document.getElementById('trait2Group').style.display = two ? 'block' : 'none';
 
-  const cols = compareColumns[baseTowers[currentTowerName].type];
+  const tower = baseTowers[currentTowerName];
+  const cols = compareColumns[tower.type];
   const activeCardTrait = document.getElementById(`${slug(currentTowerName)}-trait`)?.value;
   const traitList = two
     ? [document.getElementById('compTrait1').value, document.getElementById('compTrait2').value]
     : Object.keys(getTraitsForTower(currentTowerName));
 
-  const data = traitList.map(k => getTowerTraitMetrics(currentTowerName, k));
-  const baseline = getTowerTraitMetrics(currentTowerName, "None");
+  const data = traitList.map(k => getTowerTraitMetrics(currentTowerName, k, simCount));
+  const baseline = getTowerTraitMetrics(currentTowerName, "None", simCount);
 
   const bestVals = {};
   if (hiBest && data.length > 1) {
@@ -495,11 +535,16 @@ function renderComparison() {
     ? (sortAsc ? a[sortKey].localeCompare(b[sortKey]) : b[sortKey].localeCompare(a[sortKey]))
     : (sortAsc ? a[sortKey] - b[sortKey] : b[sortKey] - a[sortKey]));
 
+  lastCompareRows = data;
+
   const arrow = k => sortKey !== k ? '<span class="sort-arrow">▲▼</span>'
     : `<span class="sort-arrow active">${sortAsc ? '▲' : '▼'}</span>`;
 
   let html = '<table class="comp-table"><thead><tr>' +
-    cols.map(([k, label]) => `<th onclick="toggleSort('${k}')">${label} ${arrow(k)}</th>`).join('') + '</tr></thead><tbody>';
+    cols.map(([k, label, , , dObj]) => {
+      const text = typeof label === 'function' ? label(data[0] || { simCount }) : label;
+      return `<th onclick="toggleSort('${k}')">${text} ${arrow(k)}</th>`;
+    }).join('') + '</tr></thead><tbody>';
 
   data.forEach(d => {
     const isCurrent = d.traitName === activeCardTrait;
@@ -507,8 +552,8 @@ function renderComparison() {
     html += `<tr class="${isCurrent ? 'active-row' : ''}" data-trait="${safeTrait}">` + cols.map(([k, , fn, dir]) => {
       const isBest = hiBest && dir && bestVals[k] !== undefined && d[k] === bestVals[k] && d[k] !== baseline[k];
       let deltaHtml = '';
-      if (two && dir && d.traitName !== 'None' && typeof d[k] === 'number' && baseline[k] > 0 && d[k] !== 999999) {
-        const diff = ((d[k] - baseline[k]) / baseline[k]) * 100;
+      if (two && dir && d.traitName !== 'None' && typeof d[k] === 'number' && baseline[k] !== 0 && d[k] !== 999999) {
+        const diff = ((d[k] - baseline[k]) / Math.abs(baseline[k])) * 100;
         if (Math.abs(diff) >= 0.1) {
           const good = (dir === 'max' && diff > 0) || (dir === 'min' && diff < 0);
           deltaHtml = `<span class="delta ${good ? 'highlight' : 'bad'}">(${diff > 0 ? '+' : ''}${diff.toFixed(0)}%)</span>`;
@@ -532,7 +577,33 @@ function renderComparison() {
       moveHoverBadge(e);
     });
     tbody.addEventListener('mouseleave', hideHoverBadge);
+    tbody.addEventListener('click', (e) => {
+      const row = e.target.closest('tr[data-trait]');
+      if (!row) return;
+      setCardTrait(currentTowerName, row.dataset.trait);
+      renderComparison();
+    });
   }
+}
+
+function copyCompareCsv() {
+  if (!lastCompareRows.length) return;
+  const cols = compareColumns[baseTowers[currentTowerName].type];
+  const headers = cols.map(([, label]) => typeof label === 'function' ? label(lastCompareRows[0]) : label);
+  const lines = [headers.join(',')];
+  lastCompareRows.forEach(d => {
+    const cells = cols.map(([k]) => {
+      const v = d[k];
+      const str = typeof v === 'number' ? (v === 999999 ? 'N/A' : Number(v.toFixed(2))) : String(v);
+      return `"${str.replace(/"/g, '""')}"`;
+    });
+    lines.push(cells.join(','));
+  });
+  navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('copyCsvBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy CSV'; }, 1000);
+  });
 }
 
 buildCards();
