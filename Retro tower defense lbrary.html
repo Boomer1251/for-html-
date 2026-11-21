@@ -5,33 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TD Stats Library</title>
 <style>
-:root{--bg:#121212;--panel:#1e1e1e;--line:#333;--hi:#55ff55;--mut:#aaa;--gold:#ffcc44;--btn:#2a2a2a;
+:root{--bg:#121212;--panel:#1e1e1e;--line:#333;--hi:#55ff55;--mut:#aaa;--gold:#ffcc44;--bad:#ff6666;--btn:#2a2a2a;
  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{background:var(--bg);color:#fff;font-family:monospace;padding:20px;margin:0}
 .ic{width:1.1em;height:1.1em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;margin-right:4px}
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap;align-items:center}
 .tab{background:none;border:1px solid transparent;border-bottom:none;color:var(--mut);padding:9px 16px;font:bold 13px monospace;cursor:pointer;width:auto;margin:0}
 .tab:hover{color:#fff}
 .tab.active{background:var(--panel);color:var(--hi);border-color:var(--line)}
 .page{display:none}.page.active{display:block}
 .grid{display:flex;flex-wrap:wrap;gap:15px;align-items:flex-start}
-.card{background:var(--panel);border:1px solid var(--line);padding:12px;width:380px;max-width:100%;box-sizing:border-box}
-.title{font-weight:bold;font-size:16px;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:4px;display:flex;justify-content:space-between}
+.card{background:var(--panel);border:1px solid var(--line);padding:12px;width:400px;max-width:100%;box-sizing:border-box}
+.title{font-weight:bold;font-size:16px;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:4px;display:flex;justify-content:space-between;align-items:center}
 select,input,button{background:var(--btn);color:#fff;border:1px solid #444;padding:6px;font-family:monospace;width:100%;margin-bottom:8px;box-sizing:border-box}
+select:focus,input:focus{outline:none;border-color:var(--hi)}
 button{cursor:pointer;background:#333;font-weight:bold}button:hover{background:#444}
 table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
-td,th{border:1px solid var(--line);padding:4px;text-align:left}th{background:#252525}
-.summary{font-size:13px;line-height:1.5;border-top:1px dashed #444;padding-top:8px}
-.highlight{color:var(--hi)}.trait-desc{color:var(--mut);font-size:11px;margin-bottom:8px;min-height:26px}
+td,th{border:1px solid var(--line);padding:4px 6px;text-align:left}th{background:#252525}
+tbody tr:hover{background:#242424}
+.summary{font-size:13px;line-height:1.6;border-top:1px dashed #444;padding-top:8px}
+.highlight{color:var(--hi);font-weight:bold}
+.bad{color:var(--bad)}
+.trait-desc{color:var(--mut);font-size:11px;margin-bottom:8px;min-height:28px;background:#181818;padding:5px 7px;border:1px solid #2b2b2b}
 .rating{color:var(--gold);font-size:12px;margin-left:6px}
-label{font-size:11px;color:var(--mut)}
-.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1;min-width:150px}
+label{font-size:11px;color:var(--mut);display:block;margin-bottom:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}.row>div{flex:1;min-width:150px}
 .scroll{overflow-x:auto}
 .comp-table th,.comp-table td{font-size:11px;padding:6px;white-space:nowrap}
-.comp-table th{cursor:pointer;user-select:none}.comp-table th:hover{background:#333}
+.comp-table th{cursor:pointer;user-select:none;position:sticky;top:0}.comp-table th:hover{background:#333}
+.comp-table tr.active-row{background:#1b2b1b}
+.best-cell{background:#1b2e1b;color:var(--hi);font-weight:bold}
 .sort-arrow{font-size:10px;margin-left:3px;color:#666}.sort-arrow.active{color:var(--hi)}
 .chip{display:inline-block;background:#2a2a2a;border:1px solid #444;border-radius:10px;padding:1px 7px;margin:1px;font-size:10px;color:var(--mut)}
 .pill{color:var(--gold)}
+.sub-odds{color:#777;font-size:10px;margin-left:4px}
+.delta{font-size:10px;margin-left:4px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);padding:10px}
+.toolbar>div{flex:1;min-width:160px}
+.toolbar input,.toolbar select,.toolbar button{margin-bottom:0}
+.check-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:#ccc;cursor:pointer;user-select:none;height:31px}
+.check-wrap input{width:auto;margin:0;accent-color:var(--hi)}
+.empty{color:var(--mut);padding:20px;text-align:center;border:1px dashed var(--line)}
 </style>
 </head>
 <body>
@@ -45,11 +59,9 @@ label{font-size:11px;color:var(--mut)}
 <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></symbol>
 <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-5"/></symbol>
-<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/></symbol>
 <symbol id="i-blast" viewBox="0 0 24 24"><path d="M12 2l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2z"/></symbol>
 <symbol id="i-car" viewBox="0 0 24 24"><path d="M3 16v-3l2-5h14l2 5v3zM3 16v3h3v-3M18 16v3h3v-3M7 12h10"/></symbol>
 <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r=".8"/><circle cx="15" cy="15" r=".8"/><circle cx="12" cy="12" r=".8"/></symbol>
-<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
 <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"/></symbol>
 </svg>
 
@@ -60,12 +72,28 @@ label{font-size:11px;color:var(--mut)}
 </div>
 
 <!-- TOWERS -->
-<div class="page active" id="page-towers"><div class="grid" id="cardGrid"></div></div>
+<div class="page active" id="page-towers">
+  <div class="toolbar">
+    <div><label>Filter Towers</label><input id="twSearch" placeholder="Search tower name..." oninput="filterCards()"></div>
+    <div><label>Global Trait Preview</label><select id="globalTraitSelect" onchange="applyGlobalTrait(this.value)"></select></div>
+    <div style="flex:0 0 auto;min-width:120px"><label>&nbsp;</label><button onclick="resetAllTraits()">Reset Traits</button></div>
+  </div>
+  <div class="grid" id="cardGrid"></div>
+</div>
 
 <!-- TRAITS -->
 <div class="page" id="page-traits">
   <div class="row">
-    <div><label>Search</label><input id="trSearch" placeholder="name or effect..." oninput="renderTraits()"></div>
+    <div><label>Search</label><input id="trSearch" placeholder="Name or effect..." oninput="renderTraits()"></div>
+    <div><label>Category</label>
+      <select id="trCat" onchange="renderTraits()">
+        <option value="all">All Categories</option>
+        <option value="econ">Economy / Cost / Limit</option>
+        <option value="offense">Damage / Range / Blast</option>
+        <option value="speed">Cooldown / Speed</option>
+        <option value="unique">Tower-Specific</option>
+      </select>
+    </div>
     <div><label>Tower</label><select id="trTower" onchange="renderTraits()"></select></div>
   </div>
   <div class="scroll" id="traitList"></div>
@@ -79,9 +107,13 @@ label{font-size:11px;color:var(--mut)}
       <select id="compMode" onchange="renderComparison()">
         <option value="all">Compare All Allowed Traits</option>
         <option value="two">Compare 2 Traits</option>
-      </select></div>
+      </select>
+    </div>
     <div id="trait1Group" style="display:none"><label>Trait 1</label><select id="compTrait1" onchange="renderComparison()"></select></div>
     <div id="trait2Group" style="display:none"><label>Trait 2</label><select id="compTrait2" onchange="renderComparison()"></select></div>
+    <div style="flex:0 0 auto;min-width:160px"><label>&nbsp;</label>
+      <label class="check-wrap"><input type="checkbox" id="hiBest" checked onchange="renderComparison()">Highlight Best</label>
+    </div>
   </div>
   <div class="scroll" id="compareResults"></div>
 </div>
@@ -114,50 +146,51 @@ const baseTowers = {
 
 const DC = ["Superballer","Rocket","Lazer","c00lkidd","Headless.Mech","Crazy Robloxian","Chicken","Base"];
 const globalTraits = {
-  "None": { chance: "-", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "No active trait effect.", towers: "All" },
+  "None": { chance: "-", cat: "all", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "No active trait effect.", towers: "All" },
 
-  "Stonks 1": { chance: "29.17%", costMult: 1, incomeMult: 1.05, limitAdd: 0, desc: "Increases wave income by 5%", towers: ["Tycoon"] },
-  "Stonks 2": { chance: "11.35%", costMult: 1, incomeMult: 1.15, limitAdd: 0, desc: "Increases wave income by 15%", towers: ["Tycoon"] },
-  "Stonks 3": { chance: "3.24%", costMult: 1, incomeMult: 1.30, limitAdd: 0, desc: "Increases wave income by 30%", towers: ["Tycoon"] },
-  "Tycoon Monopoly": { chance: "0.32%", costMult: 1.50, incomeMult: 2.00, limitAdd: 0, desc: "Increases wave income by 100%, +50% price", towers: ["Tycoon"] },
+  "Stonks 1": { chance: "29.17%", cat: "econ", costMult: 1, incomeMult: 1.05, limitAdd: 0, desc: "Increases wave income by 5%", towers: ["Tycoon"] },
+  "Stonks 2": { chance: "11.35%", cat: "econ", costMult: 1, incomeMult: 1.15, limitAdd: 0, desc: "Increases wave income by 15%", towers: ["Tycoon"] },
+  "Stonks 3": { chance: "3.24%", cat: "econ", costMult: 1, incomeMult: 1.30, limitAdd: 0, desc: "Increases wave income by 30%", towers: ["Tycoon"] },
+  "Tycoon Monopoly": { chance: "0.32%", cat: "econ", costMult: 1.50, incomeMult: 2.00, limitAdd: 0, desc: "Increases wave income by 100%, +50% price", towers: ["Tycoon"] },
 
-  "Bargain 1": { chance: "13.74%", costMult: 0.95, incomeMult: 1, limitAdd: 0, desc: "Reduces placement and upgrade cost by 5%", towers: "All" },
-  "Bargain 2": { chance: "5%", costMult: 0.85, incomeMult: 1, limitAdd: 0, desc: "Reduces placement and upgrade cost by 15%", towers: "All" },
-  "Bargain 3": { chance: "1.56%", costMult: 0.65, incomeMult: 1, limitAdd: 0, desc: "Reduces placement and upgrade cost by 35%", towers: "All" },
-  "Extended Family": { chance: "1.25%", costMult: 1, incomeMult: 1, limitAdd: 1, desc: "Increases tower placement limit by 1", towers: "All" },
-  "Overclocked": { chance: "0.19%", costMult: 1.30, incomeMult: 1, limitAdd: 0, dmg: 0.90, cd: 0.60, desc: "-40% cooldown, -10% dmg, +30% price", towers: "All" },
-  "Hawkeye 1": { chance: "14.99%", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.10, desc: "Increases range by 10%", towers: "All" },
-  "Hawkeye 2": { chance: "6.25%", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.20, desc: "Increases range by 20%", towers: "All" },
-  "Hawkeye 3": { chance: "2.19%", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.30, desc: "Increases range by 30%", towers: "All" },
-  "Cooldown 1": { chance: "12.49%", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 0.95, desc: "Reduces cooldown by 5%", towers: "All" },
-  "Cooldown 2": { chance: "5%", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 0.90, desc: "Reduces cooldown by 10%", towers: "All" },
-  "Cooldown 3": { chance: "1.25%", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 0.85, desc: "Reduces cooldown by 15%", towers: "All" },
-  "Strength 1": { chance: "11.24%", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.05, desc: "Increases damage by 5%", towers: "All" },
-  "Strength 2": { chance: "5%", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.10, desc: "Increases damage by 10%", towers: "All" },
-  "Strength 3": { chance: "0.94%", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.20, desc: "Increases damage by 20%", towers: "All" },
-  "Gold Rush 1": { chance: "10.62%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Earn 25% more cash from kills", towers: "All" },
-  "Gold Rush 2": { chance: "5%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Earn 45% more cash from kills", towers: "All" },
-  "Goldrush 3": { chance: "1.56%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Earn 75% more cash from kills", towers: "All" },
-  "Tank": { chance: "1.25%", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.60, cd: 1.40, desc: "+60% damage, +40% cooldown", towers: "All" },
-  "Midas Touch": { chance: "0.22%", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 1.10, desc: "+200% kill income, +10% cooldown", towers: "All" },
-  "Deadeye": { chance: "0.16%", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.40, dmg: 1.30, cd: 1.15, desc: "+40% range, +30% damage, +15% cooldown", towers: "All" },
+  "Bargain 1": { chance: "13.74%", cat: "econ", costMult: 0.95, incomeMult: 1, limitAdd: 0, desc: "Reduces placement and upgrade cost by 5%", towers: "All" },
+  "Bargain 2": { chance: "5%", cat: "econ", costMult: 0.85, incomeMult: 1, limitAdd: 0, desc: "Reduces placement and upgrade cost by 15%", towers: "All" },
+  "Bargain 3": { chance: "1.56%", cat: "econ", costMult: 0.65, incomeMult: 1, limitAdd: 0, desc: "Reduces placement and upgrade cost by 35%", towers: "All" },
+  "Extended Family": { chance: "1.25%", cat: "econ", costMult: 1, incomeMult: 1, limitAdd: 1, desc: "Increases tower placement limit by 1", towers: "All" },
+  "Overclocked": { chance: "0.19%", cat: "speed", costMult: 1.30, incomeMult: 1, limitAdd: 0, dmg: 0.90, cd: 0.60, desc: "-40% cooldown, -10% dmg, +30% price", towers: "All" },
+  "Hawkeye 1": { chance: "14.99%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.10, desc: "Increases range by 10%", towers: "All" },
+  "Hawkeye 2": { chance: "6.25%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.20, desc: "Increases range by 20%", towers: "All" },
+  "Hawkeye 3": { chance: "2.19%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.30, desc: "Increases range by 30%", towers: "All" },
+  "Cooldown 1": { chance: "12.49%", cat: "speed", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 0.95, desc: "Reduces cooldown by 5%", towers: "All" },
+  "Cooldown 2": { chance: "5%", cat: "speed", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 0.90, desc: "Reduces cooldown by 10%", towers: "All" },
+  "Cooldown 3": { chance: "1.25%", cat: "speed", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 0.85, desc: "Reduces cooldown by 15%", towers: "All" },
+  "Strength 1": { chance: "11.24%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.05, desc: "Increases damage by 5%", towers: "All" },
+  "Strength 2": { chance: "5%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.10, desc: "Increases damage by 10%", towers: "All" },
+  "Strength 3": { chance: "0.94%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.20, desc: "Increases damage by 20%", towers: "All" },
+  "Gold Rush 1": { chance: "10.62%", cat: "econ", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Earn 25% more cash from kills", towers: "All" },
+  "Gold Rush 2": { chance: "5%", cat: "econ", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Earn 45% more cash from kills", towers: "All" },
+  "Gold Rush 3": { chance: "1.56%", cat: "econ", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Earn 75% more cash from kills", towers: "All" },
+  "Tank": { chance: "1.25%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, dmg: 1.60, cd: 1.40, desc: "+60% damage, +40% cooldown", towers: "All" },
+  "Midas Touch": { chance: "0.22%", cat: "econ", costMult: 1, incomeMult: 1, limitAdd: 0, cd: 1.10, desc: "+200% kill income, +10% cooldown", towers: "All" },
+  "Deadeye": { chance: "0.16%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, range: 1.40, dmg: 1.30, cd: 1.15, desc: "+40% range, +30% damage, +15% cooldown", towers: "All" },
 
-  "bonded 1": { chance: "26.43%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+5% mimic duration", towers: ["Body swap"] },
-  "bonded 2": { chance: "11.75%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+15% mimic duration", towers: ["Body swap"] },
-  "bonded 3": { chance: "0.75%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+40% mimic duration", towers: ["Body swap"] },
-  "dangerous 1": { chance: "8.81%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+10% damage multiplier", towers: ["Body swap"] },
-  "dangerous 2": { chance: "1.47%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+15% damage multiplier", towers: ["Body swap"] },
-  "dangerous 3": { chance: "0.15%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+25% damage multiplier", towers: ["Body swap"] },
-  "Danger Close 1": { chance: "8.28%", costMult: 1, incomeMult: 1, limitAdd: 0, blast: 1.10, desc: "+10% explosive radius", towers: DC },
-  "Danger Close 2": { chance: "3.31%", costMult: 1, incomeMult: 1, limitAdd: 0, blast: 1.20, desc: "+20% explosive radius", towers: DC },
-  "Danger Close 3": { chance: "1.1%", costMult: 1, incomeMult: 1, limitAdd: 0, blast: 1.35, desc: "+35% explosive radius", towers: DC },
-  "Extended Mag 1": { chance: "8.1%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+25% ammo", towers: ["Bacon","Pistoler","Bling Bacon","Jolly Elf","Gunner"] },
-  "Extended Mag 2": { chance: "4.32%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+50% ammo", towers: ["Bacon","Pistoler","Bling Bacon","Jolly Elf","Gunner"] },
-  "Extended Mag 3": { chance: "2.16%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+100% ammo", towers: ["Bacon","Pistoler","Bling Bacon","Jolly Elf","Gunner"] },
-  "Another One": { chance: "1.52%", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Deals four cards instead of three", towers: ["Chance"] },
-  "Twinning": { chance: "0.16%", costMult: 1.30, incomeMult: 1, limitAdd: 2, desc: "+2 Limit, +30% price", towers: ["Heroics"] },
-  "Mass Production": { chance: "0.13%", costMult: 1, incomeMult: 1, limitAdd: 2, dmg: 0.80, desc: "+2 Limit, -20% damage", towers: "All_Except_Support", excluded: ["DJ","Tycoon","Helper Bot","Bloxy Cola","Pizza Guy","LAZER"] }
+  "Bonded 1": { chance: "26.43%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+5% mimic duration", towers: ["Body swap"] },
+  "Bonded 2": { chance: "11.75%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+15% mimic duration", towers: ["Body swap"] },
+  "Bonded 3": { chance: "0.75%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+40% mimic duration", towers: ["Body swap"] },
+  "Dangerous 1": { chance: "8.81%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+10% damage multiplier", towers: ["Body swap"] },
+  "Dangerous 2": { chance: "1.47%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+15% damage multiplier", towers: ["Body swap"] },
+  "Dangerous 3": { chance: "0.15%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+25% damage multiplier", towers: ["Body swap"] },
+  "Danger Close 1": { chance: "8.28%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, blast: 1.10, desc: "+10% explosive radius", towers: DC },
+  "Danger Close 2": { chance: "3.31%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, blast: 1.20, desc: "+20% explosive radius", towers: DC },
+  "Danger Close 3": { chance: "1.1%", cat: "offense", costMult: 1, incomeMult: 1, limitAdd: 0, blast: 1.35, desc: "+35% explosive radius", towers: DC },
+  "Extended Mag 1": { chance: "8.1%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+25% ammo", towers: ["Bacon","Pistoler","Bling Bacon","Jolly Elf","Gunner"] },
+  "Extended Mag 2": { chance: "4.32%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+50% ammo", towers: ["Bacon","Pistoler","Bling Bacon","Jolly Elf","Gunner"] },
+  "Extended Mag 3": { chance: "2.16%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "+100% ammo", towers: ["Bacon","Pistoler","Bling Bacon","Jolly Elf","Gunner"] },
+  "Another One": { chance: "1.52%", cat: "unique", costMult: 1, incomeMult: 1, limitAdd: 0, desc: "Deals four cards instead of three", towers: ["Chance"] },
+  "Twinning": { chance: "0.16%", cat: "econ", costMult: 1.30, incomeMult: 1, limitAdd: 2, desc: "+2 Limit, +30% price", towers: ["Heroics"] },
+  "Mass Production": { chance: "0.13%", cat: "econ", costMult: 1, incomeMult: 1, limitAdd: 2, dmg: 0.80, desc: "+2 Limit, -20% damage", towers: "All_Except_Support", excluded: ["DJ","Tycoon","Helper Bot","Bloxy Cola","Pizza Guy","LAZER"] }
 };
+
 for (const k in globalTraits) {
   const t = globalTraits[k];
   if (t.dmg === undefined) t.dmg = 1;
@@ -166,38 +199,62 @@ for (const k in globalTraits) {
   if (t.blast === undefined) t.blast = 1;
 }
 
+// [key, label, formatter, bestDir ('max'|'min'|null)]
 const compareColumns = {
   income: [
-    ["traitName","Trait",d=>`<b>${d.traitName}</b>`],
-    ["numChance","Chance",d=>d.chance],
-    ["limit","Limit",d=>d.limit],
-    ["totalCostOne","Cost (1)",d=>`$${d.totalCostOne.toLocaleString()}`],
-    ["totalCostAll","Cost (All)",d=>`<span class="highlight">$${d.totalCostAll.toLocaleString()}</span>`],
-    ["maxLevelBonusOne","Max Bonus (1)",d=>`+$${d.maxLevelBonusOne.toLocaleString()}`],
-    ["maxLevelBonusAll","Max Bonus (All)",d=>`+$${d.maxLevelBonusAll.toLocaleString()}`],
-    ["paybackCyclesOne","Payback Waves (1)",d=>d.paybackCyclesOne===999999?'N/A':d.paybackCyclesOne.toFixed(2)]
+    ["traitName","Trait",d=>`<b>${d.traitName}</b>`,null],
+    ["numChance","Chance",d=>d.chance,null],
+    ["limit","Limit",d=>d.limit,"max"],
+    ["totalCostOne","Cost (1)",d=>`$${d.totalCostOne.toLocaleString()}`,"min"],
+    ["totalCostAll","Cost (All)",d=>`$${d.totalCostAll.toLocaleString()}`,"min"],
+    ["maxLevelBonusOne","Bonus (1)",d=>`+$${d.maxLevelBonusOne.toLocaleString()}`,"max"],
+    ["maxLevelBonusAll","Bonus (All)",d=>`+$${d.maxLevelBonusAll.toLocaleString()}`,"max"],
+    ["incomePer1k","Income/$1k",d=>`$${fmt(d.incomePer1k)}`,"max"],
+    ["paybackCyclesOne","Payback",d=>d.paybackCyclesOne===999999?'N/A':`${d.paybackCyclesOne.toFixed(2)}w`,"min"]
   ],
   vehicle: [
-    ["traitName","Trait",d=>`<b>${d.traitName}</b>`],
-    ["numChance","Chance",d=>d.chance],
-    ["limit","Limit",d=>d.limit],
-    ["totalCostOne","Cost (1)",d=>`$${d.totalCostOne.toLocaleString()}`],
-    ["totalCostAll","Cost (All)",d=>`<span class="highlight">$${d.totalCostAll.toLocaleString()}</span>`],
-    ["ramDpsOne","Ram DPS (1)",d=>fmt(d.ramDpsOne)],
-    ["ramDpsAll","Ram DPS (All)",d=>fmt(d.ramDpsAll)],
-    ["spawnCd","Spawn CD",d=>`${fmt(d.spawnCd)}s`],
-    ["cannonDamage","Cannon Dmg",d=>fmt(d.cannonDamage)],
-    ["cannonCd","Cannon CD",d=>`${fmt(d.cannonCd)}s`],
-    ["cannonDpsOne","Cannon DPS (1)",d=>fmt(d.cannonDpsOne)],
-    ["cannonDpsAll","Cannon DPS (All)",d=>fmt(d.cannonDpsAll)],
-    ["cannonRange","Range",d=>`${fmt(d.cannonRange)}m`],
-    ["cannonBlast","Blast",d=>`${fmt(d.cannonBlast)}m`]
+    ["traitName","Trait",d=>`<b>${d.traitName}</b>`,null],
+    ["numChance","Chance",d=>d.chance,null],
+    ["limit","Limit",d=>d.limit,"max"],
+    ["totalCostOne","Cost (1)",d=>`$${d.totalCostOne.toLocaleString()}`,"min"],
+    ["totalCostAll","Cost (All)",d=>`$${d.totalCostAll.toLocaleString()}`,"min"],
+    ["ramDpsOne","Ram DPS (1)",d=>fmt(d.ramDpsOne),"max"],
+    ["spawnCd","Spawn CD",d=>`${fmt(d.spawnCd)}s`,"min"],
+    ["cannonDpsOne","Cannon DPS (1)",d=>fmt(d.cannonDpsOne),"max"],
+    ["totalDpsAll","Combined DPS (All)",d=>fmt(d.totalDpsAll),"max"],
+    ["dpsPer1k","DPS/$1k",d=>fmt(d.dpsPer1k),"max"],
+    ["cannonRange","Range",d=>`${fmt(d.cannonRange)}m`,"max"],
+    ["cannonBlast","Blast",d=>`${fmt(d.cannonBlast)}m`,"max"]
   ]
 };
 
 let currentTowerName = "Tycoon", sortKey = null, sortAsc = true;
 const fmt = n => parseFloat(n.toFixed(2)).toLocaleString();
 const slug = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+const oneIn = ch => {
+  const p = parseFloat(ch);
+  return isNaN(p) || p <= 0 ? '' : `<span class="sub-odds">(1 in ${Math.round(100/p).toLocaleString()})</span>`;
+};
+
+function saveState() {
+  try {
+    const selected = {};
+    for (const n in baseTowers) {
+      const el = document.getElementById(`${slug(n)}-trait`);
+      if (el) selected[n] = el.value;
+    }
+    localStorage.setItem('td_lib_state', JSON.stringify({
+      tab: document.querySelector('.tab.active')?.dataset.tab || 'towers',
+      selected,
+      compTower: document.getElementById('compTower')?.value
+    }));
+  } catch (e) {}
+}
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('td_lib_state') || '{}'); }
+  catch (e) { return {}; }
+}
 
 function getTraitsForTower(towerName) {
   const out = {};
@@ -214,47 +271,87 @@ function getTraitsForTower(towerName) {
 function showTab(id) {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + id));
+  saveState();
 }
 
 /* ---------- TOWERS TAB ---------- */
 function buildCards() {
+  const saved = loadState().selected || {};
+  const gSel = document.getElementById('globalTraitSelect');
+  gSel.add(new Option('-- Per-Tower Trait --', ''));
+  for (const t in globalTraits) {
+    if (globalTraits[t].towers === "All" || globalTraits[t].towers === "All_Except_Support") {
+      gSel.add(new Option(`${t} (${globalTraits[t].chance})`, t));
+    }
+  }
+
   const grid = document.getElementById('cardGrid');
   grid.innerHTML = '';
   for (const name in baseTowers) {
     const tower = baseTowers[name], id = slug(name);
     const headers = tower.type === "income"
-      ? `<th>Lvl</th><th>${ic('coin')}Price</th><th>Bonus Cash</th>`
-      : `<th>Lvl</th><th>${ic('car')}Vehicle</th><th>${ic('coin')}Price</th><th>${ic('bolt')}Ram DPS</th><th>${ic('clock')}CD</th><th>${ic('heart')}HP</th><th>${ic('gauge')}Spd</th>`;
+      ? `<th>Lvl</th><th>${ic('coin')}Price</th><th>Bonus/Wave</th><th>Payback</th>`
+      : `<th>Lvl</th><th>${ic('car')}Unit</th><th>${ic('coin')}Price</th><th>${ic('bolt')}Ram DPS</th><th>${ic('clock')}CD</th><th>${ic('heart')}HP</th><th>${ic('gauge')}Spd</th>`;
     const ratingHtml = tower.rating ? `<span class="rating">[${tower.rating}]</span>` : '';
     const extra = tower.type === "vehicle"
       ? `<br>${ic('blast')}<span style="color:#aaa">Lv4 Cannon:</span> <span id="${id}-cannon"></span>` : '';
     const card = document.createElement('div');
     card.className = 'card';
+    card.dataset.name = name.toLowerCase();
     card.innerHTML = `
       <div class="title"><span>${ic(towerIcon[tower.type])}${name}${ratingHtml}</span><span id="${id}-limit"></span></div>
       <label>Select Trait:</label>
-      <select id="${id}-trait" onchange="updateCard('${name}')"></select>
-      <button onclick="openCompare('${name}')">${ic('bars')}Calculate Traits (Compare)</button>
+      <select id="${id}-trait" onchange="updateCard('${name}');saveState()"></select>
+      <button onclick="openCompare('${name}')">${ic('bars')}Compare All Traits</button>
       <div class="trait-desc" id="${id}-desc"></div>
       <div class="scroll"><table><thead><tr>${headers}</tr></thead><tbody id="${id}-table"></tbody></table></div>
       <div class="summary">
-        ${ic('coin')}Maxing 1 Unit: <span class="highlight" id="${id}-cost-1"></span><br>
-        ${ic('box')}Maxing All (<span id="${id}-count"></span>): <span class="highlight" id="${id}-cost-max"></span>
+        ${ic('coin')}Max 1 Unit: <span class="highlight" id="${id}-cost-1"></span><br>
+        ${ic('box')}Max All (<span id="${id}-count"></span>): <span class="highlight" id="${id}-cost-max"></span>
         ${extra}
       </div>`;
     grid.appendChild(card);
     const select = document.getElementById(`${id}-trait`);
     const traits = getTraitsForTower(name);
     for (const t in traits) select.add(new Option(`${t} (${traits[t].chance})`, t));
+    if (saved[name] && traits[saved[name]]) select.value = saved[name];
     updateCard(name);
   }
+}
+
+function applyGlobalTrait(traitName) {
+  if (!traitName) return;
+  for (const name in baseTowers) {
+    const sel = document.getElementById(`${slug(name)}-trait`);
+    if ([...sel.options].some(o => o.value === traitName)) {
+      sel.value = traitName;
+      updateCard(name);
+    }
+  }
+  saveState();
+}
+
+function resetAllTraits() {
+  document.getElementById('globalTraitSelect').value = '';
+  for (const name in baseTowers) {
+    document.getElementById(`${slug(name)}-trait`).value = 'None';
+    updateCard(name);
+  }
+  saveState();
+}
+
+function filterCards() {
+  const q = document.getElementById('twSearch').value.toLowerCase().trim();
+  document.querySelectorAll('#cardGrid .card').forEach(c => {
+    c.style.display = !q || c.dataset.name.includes(q) ? 'block' : 'none';
+  });
 }
 
 function updateCard(name) {
   const tower = baseTowers[name], id = slug(name);
   const traits = getTraitsForTower(name);
   const trait = traits[document.getElementById(`${id}-trait`).value] || globalTraits["None"];
-  document.getElementById(`${id}-desc`).textContent = `[Chance: ${trait.chance}] ${trait.desc}`;
+  document.getElementById(`${id}-desc`).innerHTML = `<b>Chance:</b> <span class="pill">${trait.chance}</span> ${oneIn(trait.chance)}<br>${trait.desc}`;
 
   const limit = tower.baseLimit + trait.limitAdd;
   document.getElementById(`${id}-limit`).textContent = `Max: ${limit}`;
@@ -264,9 +361,13 @@ function updateCard(name) {
   tower.levels.forEach((lvl, i) => {
     const price = Math.round(lvl.price * trait.costMult);
     total += price;
-    rows += tower.type === "income"
-      ? `<tr><td>${i+1}</td><td>$${price.toLocaleString()}</td><td>+$${Math.round(lvl.bonus * trait.incomeMult).toLocaleString()}</td></tr>`
-      : `<tr><td>${i+1}</td><td>${lvl.vehicle}</td><td>$${price.toLocaleString()}</td><td>${fmt(lvl.dps*trait.dmg)}</td><td>${fmt(lvl.cd*trait.cd)}s</td><td>${lvl.hp}</td><td>${lvl.speed}</td></tr>`;
+    if (tower.type === "income") {
+      const bonus = Math.round(lvl.bonus * trait.incomeMult);
+      const pb = bonus > 0 ? (total / bonus).toFixed(1) + 'w' : 'N/A';
+      rows += `<tr><td>${i+1}</td><td>$${price.toLocaleString()}</td><td class="highlight">+$${bonus.toLocaleString()}</td><td>${pb}</td></tr>`;
+    } else {
+      rows += `<tr><td>${i+1}</td><td>${lvl.vehicle}</td><td>$${price.toLocaleString()}</td><td>${fmt(lvl.dps*trait.dmg)}</td><td>${fmt(lvl.cd*trait.cd)}s</td><td>${lvl.hp}</td><td>${lvl.speed}</td></tr>`;
+    }
   });
   document.getElementById(`${id}-table`).innerHTML = rows;
   document.getElementById(`${id}-cost-1`).textContent = `$${total.toLocaleString()}`;
@@ -274,8 +375,9 @@ function updateCard(name) {
 
   if (tower.type === "vehicle") {
     const c = tower.cannon;
+    const cDmg = c.damage * trait.dmg, cCd = c.cooldown * trait.cd;
     document.getElementById(`${id}-cannon`).textContent =
-      `${fmt(c.damage*trait.dmg)} dmg, ${fmt(c.cooldown*trait.cd)}s CD, ${fmt(c.range*trait.range)}m range, ${fmt(c.explosion*trait.blast)}m blast`;
+      `${fmt(cDmg)} dmg (${fmt(cDmg/cCd)} DPS), ${fmt(cCd)}s CD, ${fmt(c.range*trait.range)}m rng, ${fmt(c.explosion*trait.blast)}m blast`;
   }
 }
 
@@ -286,33 +388,48 @@ function initTraitsTab() {
   for (const n in baseTowers) sel.add(new Option(n, n));
   renderTraits();
 }
+
 function renderTraits() {
-  const q = document.getElementById('trSearch').value.toLowerCase();
+  const q = document.getElementById('trSearch').value.toLowerCase().trim();
   const tw = document.getElementById('trTower').value;
+  const cat = document.getElementById('trCat').value;
   const list = tw ? getTraitsForTower(tw) : globalTraits;
-  let html = `<table><thead><tr><th>${ic('spark')}Trait</th><th>${ic('dice')}Chance</th><th>Effect</th><th>${ic('tower')}Towers</th></tr></thead><tbody>`;
+  let count = 0;
+  let html = `<table><thead><tr><th>${ic('spark')}Trait</th><th>${ic('dice')}Chance</th><th>Effect</th><th>${ic('tower')}Allowed Towers</th></tr></thead><tbody>`;
   for (const n in list) {
     if (n === "None") continue;
     const t = list[n];
+    if (cat !== "all" && t.cat !== cat) continue;
     if (q && !(n + ' ' + t.desc).toLowerCase().includes(q)) continue;
+    count++;
     const tw2 = Array.isArray(t.towers) ? t.towers.map(x => `<span class="chip">${x}</span>`).join('')
       : `<span class="chip">${t.towers === "All" ? "All towers" : "All except support"}</span>`;
-    html += `<tr><td><b>${n}</b></td><td class="pill">${t.chance}</td><td>${t.desc}</td><td>${tw2}</td></tr>`;
+    html += `<tr><td><b>${n}</b></td><td class="pill">${t.chance}${oneIn(t.chance)}</td><td>${t.desc}</td><td>${tw2}</td></tr>`;
   }
-  document.getElementById('traitList').innerHTML = html + '</tbody></table>';
+  document.getElementById('traitList').innerHTML = count
+    ? html + '</tbody></table>'
+    : `<div class="empty">No traits match your current filters.</div>`;
 }
 
 /* ---------- COMPARE TAB ---------- */
 function initCompareTab() {
   const sel = document.getElementById('compTower');
   for (const n in baseTowers) sel.add(new Option(n, n));
+  const savedTower = loadState().compTower;
+  if (savedTower && baseTowers[savedTower]) sel.value = savedTower;
   populateCompare();
 }
+
 function openCompare(name) {
   document.getElementById('compTower').value = name;
   populateCompare();
+  const activeTrait = document.getElementById(`${slug(name)}-trait`)?.value;
+  if (activeTrait && activeTrait !== 'None') {
+    document.getElementById('compTrait1').value = activeTrait;
+  }
   showTab('compare');
 }
+
 function populateCompare() {
   currentTowerName = document.getElementById('compTower').value;
   sortKey = null; sortAsc = true;
@@ -325,56 +442,111 @@ function populateCompare() {
   const defs = baseTowers[currentTowerName].defaultCompare || [];
   if (keys.includes(defs[0])) document.getElementById('compTrait1').value = defs[0];
   if (keys.includes(defs[1])) document.getElementById('compTrait2').value = defs[1];
+  saveState();
   renderComparison();
 }
+
 function toggleSort(key) {
   if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
   renderComparison();
 }
+
 function getTowerTraitMetrics(towerName, traitKey) {
   const tower = baseTowers[towerName], trait = globalTraits[traitKey];
   const limit = tower.baseLimit + trait.limitAdd;
   let totalCostOne = 0;
   tower.levels.forEach(l => totalCostOne += Math.round(l.price * trait.costMult));
+  const totalCostAll = totalCostOne * limit;
   let numChance = parseFloat(trait.chance.replace('%', ''));
   if (isNaN(numChance)) numChance = -1;
-  const base = { traitName: traitKey, chance: trait.chance, numChance, limit, totalCostOne, totalCostAll: totalCostOne * limit };
+  const base = { traitName: traitKey, chance: trait.chance, numChance, limit, totalCostOne, totalCostAll };
   const last = tower.levels[tower.levels.length - 1];
 
   if (tower.type === "income") {
     const b = Math.round(last.bonus * trait.incomeMult);
-    return { ...base, maxLevelBonusOne: b, maxLevelBonusAll: b * limit, paybackCyclesOne: b > 0 ? totalCostOne / b : 999999 };
+    const maxLevelBonusAll = b * limit;
+    return {
+      ...base,
+      maxLevelBonusOne: b,
+      maxLevelBonusAll,
+      incomePer1k: totalCostOne > 0 ? (b / totalCostOne) * 1000 : 0,
+      paybackCyclesOne: b > 0 ? totalCostOne / b : 999999
+    };
   }
   const c = tower.cannon;
   const cannonDamage = c.damage * trait.dmg, cannonCd = c.cooldown * trait.cd;
   const cannonDpsOne = cannonDamage / cannonCd, ramDpsOne = last.dps * trait.dmg;
-  return { ...base, ramDpsOne, ramDpsAll: ramDpsOne * limit, spawnCd: last.cd * trait.cd,
-    cannonDamage, cannonCd, cannonDpsOne, cannonDpsAll: cannonDpsOne * limit,
-    cannonRange: c.range * trait.range, cannonBlast: c.explosion * trait.blast };
+  const totalDpsAll = (ramDpsOne + cannonDpsOne) * limit;
+  return {
+    ...base,
+    ramDpsOne,
+    spawnCd: last.cd * trait.cd,
+    cannonDpsOne,
+    totalDpsAll,
+    dpsPer1k: totalCostAll > 0 ? (totalDpsAll / totalCostAll) * 1000 : 0,
+    cannonRange: c.range * trait.range,
+    cannonBlast: c.explosion * trait.blast
+  };
 }
+
 function renderComparison() {
   const two = document.getElementById('compMode').value === 'two';
+  const hiBest = document.getElementById('hiBest').checked;
   document.getElementById('trait1Group').style.display = two ? 'block' : 'none';
   document.getElementById('trait2Group').style.display = two ? 'block' : 'none';
+
   const cols = compareColumns[baseTowers[currentTowerName].type];
+  const activeCardTrait = document.getElementById(`${slug(currentTowerName)}-trait`)?.value;
   const traitList = two
     ? [document.getElementById('compTrait1').value, document.getElementById('compTrait2').value]
     : Object.keys(getTraitsForTower(currentTowerName));
+
   const data = traitList.map(k => getTowerTraitMetrics(currentTowerName, k));
+  const baseline = getTowerTraitMetrics(currentTowerName, "None");
+
+  // Compute best values per column
+  const bestVals = {};
+  if (hiBest && data.length > 1) {
+    cols.forEach(([k, , , dir]) => {
+      if (!dir) return;
+      const vals = data.map(d => d[k]).filter(v => typeof v === 'number' && v !== 999999);
+      if (vals.length) bestVals[k] = dir === 'max' ? Math.max(...vals) : Math.min(...vals);
+    });
+  }
+
   if (sortKey) data.sort((a, b) => typeof a[sortKey] === 'string'
     ? (sortAsc ? a[sortKey].localeCompare(b[sortKey]) : b[sortKey].localeCompare(a[sortKey]))
     : (sortAsc ? a[sortKey] - b[sortKey] : b[sortKey] - a[sortKey]));
+
   const arrow = k => sortKey !== k ? '<span class="sort-arrow">▲▼</span>'
     : `<span class="sort-arrow active">${sortAsc ? '▲' : '▼'}</span>`;
+
   let html = '<table class="comp-table"><thead><tr>' +
     cols.map(([k, label]) => `<th onclick="toggleSort('${k}')">${label} ${arrow(k)}</th>`).join('') + '</tr></thead><tbody>';
-  data.forEach(d => html += '<tr>' + cols.map(c => `<td>${c[2](d)}</td>`).join('') + '</tr>');
+
+  data.forEach(d => {
+    const isCurrent = d.traitName === activeCardTrait;
+    html += `<tr class="${isCurrent ? 'active-row' : ''}">` + cols.map(([k, , fn, dir]) => {
+      const isBest = hiBest && dir && bestVals[k] !== undefined && d[k] === bestVals[k] && d[k] !== baseline[k];
+      let deltaHtml = '';
+      if (two && dir && d.traitName !== 'None' && typeof d[k] === 'number' && baseline[k] > 0 && d[k] !== 999999) {
+        const diff = ((d[k] - baseline[k]) / baseline[k]) * 100;
+        if (Math.abs(diff) >= 0.1) {
+          const good = (dir === 'max' && diff > 0) || (dir === 'min' && diff < 0);
+          deltaHtml = `<span class="delta ${good ? 'highlight' : 'bad'}">(${diff > 0 ? '+' : ''}${diff.toFixed(0)}%)</span>`;
+        }
+      }
+      return `<td class="${isBest ? 'best-cell' : ''}">${fn(d)}${deltaHtml}</td>`;
+    }).join('') + '</tr>';
+  });
   document.getElementById('compareResults').innerHTML = html + '</tbody></table>';
 }
 
 buildCards();
 initTraitsTab();
 initCompareTab();
+const savedTab = loadState().tab;
+if (savedTab && document.getElementById('page-' + savedTab)) showTab(savedTab);
 </script>
 </body>
 </html>
