@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa Polski – Kompendium</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --sidebar: #181818;
+      --card: #1e1e1e;
+      --text: #e0e0e0;
+      --muted: #9e9e9e;
+      --accent: #ef5350;
+      --border: #2c2c2c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    aside {
+      width: 260px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 20px 16px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      color: #ffffff;
+    }
+
+    p.subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    input[type="search"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    input[type="search"]:focus {
+      border-color: var(--accent);
+    }
+
+    nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 8px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    nav a:hover {
+      background: var(--card);
+      color: var(--accent);
+    }
+
+    main {
+      margin-left: 260px;
+      flex: 1;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+      align-content: start;
+    }
+
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    li {
+      padding: 5px 0;
+      border-bottom: 1px solid #262626;
+      font-size: 0.92rem;
+    }
+
+    li:last-child {
+      border-bottom: none;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+
+      aside {
+        position: static;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 14px;
+      }
+
+      nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      nav a {
+        background: var(--card);
+        padding: 6px 10px;
+        font-size: 0.85rem;
+      }
+
+      main {
+        margin-left: 0;
+        padding: 14px;
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <div>
+      <h1>Mapa Polski</h1>
+      <p class="subtitle">Kompendium geograficzne</p>
+    </div>
+
+    <input type="search" id="searchInput" placeholder="Szukaj...">
+
+    <nav>
+      <a href="#wojewodztwa">Województwa i stolice</a>
+      <a href="#sasiedzi">Sąsiedzi Polski</a>
+      <a href="#jeziora">Największe jeziora</a>
+      <a href="#rzeki">Główne rzeki</a>
+      <a href="#gory">Góry i pasma</a>
+      <a href="#krainy">Krainy geograficzne</a>
+    </nav>
+  </aside>
+
+  <main>
+    <section id="wojewodztwa">
+      <h2>Województwa i stolice (16)</h2>
+      <ul>
+        <li><strong>Dolnośląskie</strong> – Wrocław</li>
+        <li><strong>Kujawsko-pomorskie</strong> – Bydgoszcz <span class="muted">(wojewoda)</span>, Toruń <span class="muted">(sejmik)</span></li>
+        <li><strong>Lubelskie</strong> – Lublin</li>
+        <li><strong>Lubuskie</strong> – Gorzów Wlkp. <span class="muted">(wojewoda)</span>, Zielona Góra <span class="muted">(sejmik)</span></li>
+        <li><strong>Łódzkie</strong> – Łódź</li>
+        <li><strong>Małopolskie</strong> – Kraków</li>
+        <li><strong>Mazowieckie</strong> – Warszawa</li>
+        <li><strong>Opolskie</strong> – Opole</li>
+        <li><strong>Podkarpackie</strong> – Rzeszów</li>
+        <li><strong>Podlaskie</strong> – Białystok</li>
+        <li><strong>Pomorskie</strong> – Gdańsk</li>
+        <li><strong>Śląskie</strong> – Katowice</li>
+        <li><strong>Świętokrzyskie</strong> – Kielce</li>
+        <li><strong>Warmińsko-mazurskie</strong> – Olsztyn</li>
+        <li><strong>Wielkopolskie</strong> – Poznań</li>
+        <li><strong>Zachodniopomorskie</strong> – Szczecin</li>
+      </ul>
+    </section>
+
+    <section id="sasiedzi">
+      <h2>Sąsiedzi Polski (7)</h2>
+      <ul>
+        <li><strong>Niemcy</strong> <span class="muted">(zachód)</span></li>
+        <li><strong>Czechy</strong> <span class="muted">(południowy zachód)</span></li>
+        <li><strong>Słowacja</strong> <span class="muted">(południe)</span></li>
+        <li><strong>Ukraina</strong> <span class="muted">(południowy wschód)</span></li>
+        <li><strong>Białoruś</strong> <span class="muted">(wschód)</span></li>
+        <li><strong>Litwa</strong> <span class="muted">(północny wschód)</span></li>
+        <li><strong>Rosja</strong> <span class="muted">(północ – Obwód Królewiecki)</span></li>
+      </ul>
+    </section>
+
+    <section id="jeziora">
+      <h2>Największe jeziora</h2>
+      <ul>
+        <li><strong>Śniardwy</strong> – 113,4 km² <span class="muted">(Mazury)</span></li>
+        <li><strong>Mamry</strong> – 104,4 km² <span class="muted">(Mazury)</span></li>
+        <li><strong>Łebsko</strong> – 71,4 km² <span class="muted">(Wybrzeże Słowińskie)</span></li>
+        <li><strong>Dąbie</strong> – 56,0 km² <span class="muted">(Dolina Dolnej Odry)</span></li>
+        <li><strong>Miedwie</strong> – 35,3 km² <span class="muted">(Równina Pyrzycka)</span></li>
+        <li><strong>Jeziorak</strong> – 34,6 km² <span class="muted">(Pojezierze Iławskie)</span></li>
+        <li><strong>Niegocin</strong> – 26,0 km² <span class="muted">(Mazury)</span></li>
+        <li><strong>Gardno</strong> – 24,7 km² <span class="muted">(Wybrzeże Słowińskie)</span></li>
+        <li><strong>Hańcza</strong> – 3,1 km² <span class="muted">(najgłębsze – 108,5 m)</span></li>
+      </ul>
+    </section>
+
+    <section id="rzeki">
+      <h2>Główne rzeki</h2>
+      <ul>
+        <li><strong>Wisła</strong> – 1047 km <span class="muted">(uchodzi do Bałtyku)</span></li>
+        <li><strong>Odra</strong> – 854 km <span class="muted">(742 km w Polsce)</span></li>
+        <li><strong>Warta</strong> – 808 km <span class="muted">(dopływ Odry)</span></li>
+        <li><strong>Bug</strong> – 772 km <span class="muted">(587 km w Polsce, dopływ Narwi)</span></li>
+        <li><strong>Narew</strong> – 484 km <span class="muted">(448 km w Polsce, dopływ Wisły)</span></li>
+        <li><strong>San</strong> – 443 km <span class="muted">(dopływ Wisły)</span></li>
+        <li><strong>Noteć</strong> – 388 km <span class="muted">(dopływ Warty)</span></li>
+        <li><strong>Pilica</strong> – 319 km <span class="muted">(dopływ Wisły)</span></li>
+        <li><strong>Wieprz</strong> – 303 km <span class="muted">(dopływ Wisły)</span></li>
+        <li><strong>Bóbr</strong> – 272 km <span class="muted">(dopływ Odry)</span></li>
+      </ul>
+    </section>
+
+    <section id="gory">
+      <h2>Góry i pasma górskie</h2>
+      <ul>
+        <li><strong>Karpaty</strong> – Rysy (2499 m n.p.m.)
+          <br><span class="muted">Tatry, Beskidy, Bieszczady, Pieniny, Gorce</span>
+        </li>
+        <li><strong>Sudety</strong> – Śnieżka (1603 m n.p.m.)
+          <br><span class="muted">Karkonosze, Góry Stołowe, Sowie, Izerskie, Masyw Śnieżnika</span>
+        </li>
+        <li><strong>Góry Świętokrzyskie</strong> – Łysica (614 m n.p.m.)
+          <br><span class="muted">Łysogóry (najstarsze góry w Polsce)</span>
+        </li>
+      </ul>
+    </section>
+
+    <section id="krainy">
+      <h2>Krainy geograficzne (od północy)</h2>
+      <ul>
+        <li><strong>Pobrzeża Południowobałtyckie</strong> – Wybrzeże Słowińskie, Żuławy Wiślane, Pobrzeże Szczecińskie</li>
+        <li><strong>Pojezierza</strong> – Pomorskie, Mazurskie, Wielkopolskie</li>
+        <li><strong>Niziny Środkowopolskie</strong> – Mazowiecka, Wielkopolska, Śląska, Podlaska</li>
+        <li><strong>Wyżyny Polskie</strong> – Śląska, Krakowsko-Częstochowska, Kielecka, Lubelska, Roztocze</li>
+        <li><strong>Kotliny Podkarpackie</strong> – Sandomierska, Oświęcimska</li>
+        <li><strong>Góry</strong> – Karpaty, Sudety</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const sections = document.querySelectorAll('section');
+
+    searchInput.addEventListener('input', function () {
+      const query = this.value.toLowerCase().trim();
+
+      sections.forEach(section => {
+        const items = section.querySelectorAll('li');
+        let hasVisibleItems = false;
+
+        items.forEach(item => {
+          const text = item.textContent.toLowerCase();
+          if (text.includes(query)) {
+            item.style.display = '';
+            hasVisibleItems = true;
+          } else {
+            item.style.display = 'none';
+          }
+        });
+
+        section.style.display = hasVisibleItems ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>
