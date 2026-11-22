@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa Polski – Kompendium</title>
+  <title>Mapa Polski – Kompendium i Test</title>
   <style>
     :root {
       --bg: #121212;
@@ -12,6 +12,7 @@
       --text: #e0e0e0;
       --muted: #9e9e9e;
       --accent: #ef5350;
+      --green: #4caf50;
       --border: #2c2c2c;
     }
 
@@ -43,6 +44,7 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      z-index: 10;
     }
 
     h1 {
@@ -55,7 +57,38 @@
       color: var(--muted);
     }
 
-    input[type="search"] {
+    .tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+
+    .tab-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 6px;
+      text-align: left;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .tab-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    input[type="search"], input[type="text"], select {
       width: 100%;
       padding: 10px 12px;
       background: var(--bg);
@@ -66,7 +99,7 @@
       outline: none;
     }
 
-    input[type="search"]:focus {
+    input[type="search"]:focus, input[type="text"]:focus, select:focus {
       border-color: var(--accent);
     }
 
@@ -94,23 +127,39 @@
       margin-left: 260px;
       flex: 1;
       padding: 20px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    #view-notes.active {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
       gap: 16px;
       align-content: start;
     }
 
-    section {
+    section, .panel {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 16px;
     }
 
+    .panel {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
     h2 {
       font-size: 1.1rem;
       color: var(--accent);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       border-bottom: 1px solid var(--border);
       padding-bottom: 6px;
     }
@@ -134,6 +183,163 @@
       font-size: 0.85rem;
     }
 
+    /* TEST UI */
+    .test-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .hardcore-box {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .hardcore-box.active-hc {
+      border-color: var(--accent);
+      background: #251616;
+    }
+
+    .hardcore-box input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .quiz-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .question-text {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .opt-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 6px;
+      text-align: left;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: 0.12s;
+    }
+
+    .opt-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+    }
+
+    .opt-btn.correct {
+      background: #1b3320;
+      border-color: var(--green);
+      color: #ffffff;
+    }
+
+    .opt-btn.wrong {
+      background: #381818;
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .type-box {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--accent);
+      border: none;
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .feedback {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .feedback.ok {
+      display: block;
+      background: #1b3320;
+      border: 1px solid var(--green);
+      color: #a5d6a7;
+    }
+
+    .feedback.err {
+      display: block;
+      background: #381818;
+      border: 1px solid var(--accent);
+      color: #ef9a9a;
+    }
+
+    /* STATS UI */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+    }
+
+    .stat-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
     @media (max-width: 768px) {
       body {
         flex-direction: column;
@@ -147,6 +353,18 @@
         padding: 14px;
       }
 
+      .tabs {
+        flex-direction: row;
+        padding-bottom: 10px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        font-size: 0.88rem;
+      }
+
       nav {
         flex-direction: row;
         flex-wrap: wrap;
@@ -156,12 +374,19 @@
       nav a {
         background: var(--card);
         padding: 6px 10px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
       }
 
       main {
         margin-left: 0;
         padding: 14px;
+      }
+
+      #view-notes.active {
+        grid-template-columns: 1fr;
+      }
+
+      .test-controls {
         grid-template-columns: 1fr;
       }
     }
@@ -174,137 +399,517 @@
       <p class="subtitle">Kompendium geograficzne</p>
     </div>
 
-    <input type="search" id="searchInput" placeholder="Szukaj...">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="notes">Notatki</button>
+      <button class="tab-btn" data-tab="test">Test</button>
+      <button class="tab-btn" data-tab="stats">Statystyki</button>
+    </div>
 
-    <nav>
-      <a href="#wojewodztwa">Województwa</a>
-      <a href="#sasiedzi">Sąsiedzi Polski</a>
-      <a href="#jeziora">Największe jeziora</a>
-      <a href="#rzeki">Główne rzeki</a>
-      <a href="#gory">Góry i pasma</a>
-      <a href="#krainy">Krainy geograficzne</a>
-    </nav>
+    <div id="notes-sidebar-tools">
+      <input type="search" id="searchInput" placeholder="Szukaj..." style="margin-bottom: 12px;">
+      <nav>
+        <a href="#wojewodztwa">Województwa</a>
+        <a href="#sasiedzi">Sąsiedzi Polski</a>
+        <a href="#jeziora">Największe jeziora</a>
+        <a href="#rzeki">Główne rzeki</a>
+        <a href="#gory">Góry i pasma</a>
+        <a href="#krainy">Krainy geograficzne</a>
+      </nav>
+    </div>
   </aside>
 
   <main>
-    <section id="wojewodztwa">
-      <h2>Województwa (16)</h2>
-      <ul>
-        <li>Dolnośląskie</li>
-        <li>Kujawsko-pomorskie</li>
-        <li>Lubelskie</li>
-        <li>Lubuskie</li>
-        <li>Łódzkie</li>
-        <li>Małopolskie</li>
-        <li>Mazowieckie</li>
-        <li>Opolskie</li>
-        <li>Podkarpackie</li>
-        <li>Podlaskie</li>
-        <li>Pomorskie</li>
-        <li>Śląskie</li>
-        <li>Świętokrzyskie</li>
-        <li>Warmińsko-mazurskie</li>
-        <li>Wielkopolskie</li>
-        <li>Zachodniopomorskie</li>
-      </ul>
-    </section>
+    <!-- WIDOK 1: NOTATKI -->
+    <div id="view-notes" class="view active">
+      <section id="wojewodztwa">
+        <h2>Województwa (16)</h2>
+        <ul>
+          <li>Dolnośląskie</li>
+          <li>Kujawsko-pomorskie</li>
+          <li>Lubelskie</li>
+          <li>Lubuskie</li>
+          <li>Łódzkie</li>
+          <li>Małopolskie</li>
+          <li>Mazowieckie</li>
+          <li>Opolskie</li>
+          <li>Podkarpackie</li>
+          <li>Podlaskie</li>
+          <li>Pomorskie</li>
+          <li>Śląskie</li>
+          <li>Świętokrzyskie</li>
+          <li>Warmińsko-mazurskie</li>
+          <li>Wielkopolskie</li>
+          <li>Zachodniopomorskie</li>
+        </ul>
+      </section>
 
-    <section id="sasiedzi">
-      <h2>Sąsiedzi Polski (7)</h2>
-      <ul>
-        <li><strong>Niemcy</strong> <span class="muted">(zachód)</span></li>
-        <li><strong>Czechy</strong> <span class="muted">(południowy zachód)</span></li>
-        <li><strong>Słowacja</strong> <span class="muted">(południe)</span></li>
-        <li><strong>Ukraina</strong> <span class="muted">(południowy wschód)</span></li>
-        <li><strong>Białoruś</strong> <span class="muted">(wschód)</span></li>
-        <li><strong>Litwa</strong> <span class="muted">(północny wschód)</span></li>
-        <li><strong>Rosja</strong> <span class="muted">(północ – Obwód Królewiecki)</span></li>
-      </ul>
-    </section>
+      <section id="sasiedzi">
+        <h2>Sąsiedzi Polski (7)</h2>
+        <ul>
+          <li><strong>Niemcy</strong> <span class="muted">(zachód)</span></li>
+          <li><strong>Czechy</strong> <span class="muted">(południowy zachód)</span></li>
+          <li><strong>Słowacja</strong> <span class="muted">(południe)</span></li>
+          <li><strong>Ukraina</strong> <span class="muted">(południowy wschód)</span></li>
+          <li><strong>Białoruś</strong> <span class="muted">(wschód)</span></li>
+          <li><strong>Litwa</strong> <span class="muted">(północny wschód)</span></li>
+          <li><strong>Rosja</strong> <span class="muted">(północ – Obwód Królewiecki)</span></li>
+        </ul>
+      </section>
 
-    <section id="jeziora">
-      <h2>Największe jeziora</h2>
-      <ul>
-        <li><strong>Śniardwy</strong> – 113,4 km² <span class="muted">(Mazury)</span></li>
-        <li><strong>Mamry</strong> – 104,4 km² <span class="muted">(Mazury)</span></li>
-        <li><strong>Łebsko</strong> – 71,4 km² <span class="muted">(Wybrzeże Słowińskie)</span></li>
-        <li><strong>Dąbie</strong> – 56,0 km² <span class="muted">(Dolina Dolnej Odry)</span></li>
-        <li><strong>Miedwie</strong> – 35,3 km² <span class="muted">(Równina Pyrzycka)</span></li>
-        <li><strong>Jeziorak</strong> – 34,6 km² <span class="muted">(Pojezierze Iławskie)</span></li>
-        <li><strong>Niegocin</strong> – 26,0 km² <span class="muted">(Mazury)</span></li>
-        <li><strong>Gardno</strong> – 24,7 km² <span class="muted">(Wybrzeże Słowińskie)</span></li>
-        <li><strong>Hańcza</strong> – 3,1 km² <span class="muted">(najgłębsze – 108,5 m)</span></li>
-      </ul>
-    </section>
+      <section id="jeziora">
+        <h2>Największe jeziora</h2>
+        <ul>
+          <li><strong>Śniardwy</strong> – 113,4 km² <span class="muted">(Mazury)</span></li>
+          <li><strong>Mamry</strong> – 104,4 km² <span class="muted">(Mazury)</span></li>
+          <li><strong>Łebsko</strong> – 71,4 km² <span class="muted">(Wybrzeże Słowińskie)</span></li>
+          <li><strong>Dąbie</strong> – 56,0 km² <span class="muted">(Dolina Dolnej Odry)</span></li>
+          <li><strong>Miedwie</strong> – 35,3 km² <span class="muted">(Równina Pyrzycka)</span></li>
+          <li><strong>Jeziorak</strong> – 34,6 km² <span class="muted">(Pojezierze Iławskie)</span></li>
+          <li><strong>Niegocin</strong> – 26,0 km² <span class="muted">(Mazury)</span></li>
+          <li><strong>Gardno</strong> – 24,7 km² <span class="muted">(Wybrzeże Słowińskie)</span></li>
+          <li><strong>Hańcza</strong> – 3,1 km² <span class="muted">(najgłębsze – 108,5 m)</span></li>
+        </ul>
+      </section>
 
-    <section id="rzeki">
-      <h2>Główne rzeki</h2>
-      <ul>
-        <li><strong>Wisła</strong> – 1047 km <span class="muted">(uchodzi do Bałtyku)</span></li>
-        <li><strong>Odra</strong> – 854 km <span class="muted">(742 km w Polsce)</span></li>
-        <li><strong>Warta</strong> – 808 km <span class="muted">(dopływ Odry)</span></li>
-        <li><strong>Bug</strong> – 772 km <span class="muted">(587 km w Polsce, dopływ Narwi)</span></li>
-        <li><strong>Narew</strong> – 484 km <span class="muted">(448 km w Polsce, dopływ Wisły)</span></li>
-        <li><strong>San</strong> – 443 km <span class="muted">(dopływ Wisły)</span></li>
-        <li><strong>Noteć</strong> – 388 km <span class="muted">(dopływ Warty)</span></li>
-        <li><strong>Pilica</strong> – 319 km <span class="muted">(dopływ Wisły)</span></li>
-        <li><strong>Wieprz</strong> – 303 km <span class="muted">(dopływ Wisły)</span></li>
-        <li><strong>Bóbr</strong> – 272 km <span class="muted">(dopływ Odry)</span></li>
-      </ul>
-    </section>
+      <section id="rzeki">
+        <h2>Główne rzeki</h2>
+        <ul>
+          <li><strong>Wisła</strong> – 1047 km <span class="muted">(uchodzi do Bałtyku)</span></li>
+          <li><strong>Odra</strong> – 854 km <span class="muted">(742 km w Polsce)</span></li>
+          <li><strong>Warta</strong> – 808 km <span class="muted">(dopływ Odry)</span></li>
+          <li><strong>Bug</strong> – 772 km <span class="muted">(587 km w Polsce, dopływ Narwi)</span></li>
+          <li><strong>Narew</strong> – 484 km <span class="muted">(448 km w Polsce, dopływ Wisły)</span></li>
+          <li><strong>San</strong> – 443 km <span class="muted">(dopływ Wisły)</span></li>
+          <li><strong>Noteć</strong> – 388 km <span class="muted">(dopływ Warty)</span></li>
+          <li><strong>Pilica</strong> – 319 km <span class="muted">(dopływ Wisły)</span></li>
+          <li><strong>Wieprz</strong> – 303 km <span class="muted">(dopływ Wisły)</span></li>
+          <li><strong>Bóbr</strong> – 272 km <span class="muted">(dopływ Odry)</span></li>
+        </ul>
+      </section>
 
-    <section id="gory">
-      <h2>Góry i pasma górskie</h2>
-      <ul>
-        <li><strong>Karpaty</strong> – Rysy (2499 m n.p.m.)
-          <br><span class="muted">Tatry, Beskidy, Bieszczady, Pieniny, Gorce</span>
-        </li>
-        <li><strong>Sudety</strong> – Śnieżka (1603 m n.p.m.)
-          <br><span class="muted">Karkonosze, Góry Stołowe, Sowie, Izerskie, Masyw Śnieżnika</span>
-        </li>
-        <li><strong>Góry Świętokrzyskie</strong> – Łysica (614 m n.p.m.)
-          <br><span class="muted">Łysogóry (najstarsze góry w Polsce)</span>
-        </li>
-      </ul>
-    </section>
+      <section id="gory">
+        <h2>Góry i pasma górskie</h2>
+        <ul>
+          <li><strong>Karpaty</strong> – Rysy (2499 m n.p.m.)
+            <br><span class="muted">Tatry, Beskidy, Bieszczady, Pieniny, Gorce</span>
+          </li>
+          <li><strong>Sudety</strong> – Śnieżka (1603 m n.p.m.)
+            <br><span class="muted">Karkonosze, Góry Stołowe, Sowie, Izerskie, Masyw Śnieżnika</span>
+          </li>
+          <li><strong>Góry Świętokrzyskie</strong> – Łysica (614 m n.p.m.)
+            <br><span class="muted">Łysogóry (najstarsze góry w Polsce)</span>
+          </li>
+        </ul>
+      </section>
 
-    <section id="krainy">
-      <h2>Krainy geograficzne (od północy)</h2>
-      <ul>
-        <li><strong>Pobrzeża Południowobałtyckie</strong> – Wybrzeże Słowińskie, Żuławy Wiślane, Pobrzeże Szczecińskie</li>
-        <li><strong>Pojezierza</strong> – Pomorskie, Mazurskie, Wielkopolskie</li>
-        <li><strong>Niziny Środkowopolskie</strong> – Mazowiecka, Wielkopolska, Śląska, Podlaska</li>
-        <li><strong>Wyżyny Polskie</strong> – Śląska, Krakowsko-Częstochowska, Kielecka, Lubelska, Roztocze</li>
-        <li><strong>Kotliny Podkarpackie</strong> – Sandomierska, Oświęcimska</li>
-        <li><strong>Góry</strong> – Karpaty, Sudety</li>
-      </ul>
-    </section>
+      <section id="krainy">
+        <h2>Krainy geograficzne (od północy)</h2>
+        <ul>
+          <li><strong>Pobrzeża Południowobałtyckie</strong> – Wybrzeże Słowińskie, Żuławy Wiślane, Pobrzeże Szczecińskie</li>
+          <li><strong>Pojezierza</strong> – Pomorskie, Mazurskie, Wielkopolskie</li>
+          <li><strong>Niziny Środkowopolskie</strong> – Mazowiecka, Wielkopolska, Śląska, Podlaska</li>
+          <li><strong>Wyżyny Polskie</strong> – Śląska, Krakowsko-Częstochowska, Kielecka, Lubelska, Roztocze</li>
+          <li><strong>Kotliny Podkarpackie</strong> – Sandomierska, Oświęcimska</li>
+          <li><strong>Góry</strong> – Karpaty, Sudety</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- WIDOK 2: TEST -->
+    <div id="view-test" class="view">
+      <div class="panel">
+        <h2>Test wiedzy</h2>
+
+        <div class="test-controls">
+          <div>
+            <label class="muted" for="catSelect">Kategoria</label>
+            <select id="catSelect">
+              <option value="all">Wszystko (mieszane)</option>
+              <option value="wojewodztwa">Województwa</option>
+              <option value="sasiedzi">Sąsiedzi Polski</option>
+              <option value="jeziora">Jeziora</option>
+              <option value="rzeki">Rzeki</option>
+              <option value="gory">Góry</option>
+              <option value="krainy">Krainy geograficzne</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="muted" for="modeSelect">Tryb odpowiedzi</label>
+            <select id="modeSelect">
+              <option value="select">Wybór (ABCD)</option>
+              <option value="type">Wpisywanie nazwy</option>
+            </select>
+          </div>
+
+          <label class="hardcore-box" id="hcLabel">
+            <div>
+              <strong>Tryb Hardcore</strong>
+              <div class="muted">Błędna odpowiedź natychmiast resetuje podejście i serię</div>
+            </div>
+            <input type="checkbox" id="hcCheck">
+          </label>
+        </div>
+
+        <div class="quiz-meta">
+          <span id="runCounter">Pytanie w podejściu: 1</span>
+          <span id="streakCounter">Seria: 0</span>
+        </div>
+
+        <div id="quizArea">
+          <div class="question-text" id="qText">Ładowanie...</div>
+          <div id="optionsContainer" class="options-grid"></div>
+          <div id="typeContainer" class="type-box" style="display: none;">
+            <input type="text" id="typeInput" placeholder="Wpisz odpowiedź..." autocomplete="off">
+            <button class="btn" id="submitTypeBtn">Sprawdź</button>
+          </div>
+          <div id="feedbackBox" class="feedback"></div>
+          <div style="margin-top: 14px; display: flex; gap: 8px;">
+            <button class="btn" id="nextBtn" style="display: none;">Następne pytanie</button>
+            <button class="btn btn-secondary" id="restartBtn">Nowe podejście</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WIDOK 3: STATYSTYKI -->
+    <div id="view-stats" class="view">
+      <div class="panel">
+        <h2>Statystyki</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-val" id="stWinrate">0%</div>
+            <div class="stat-label">Winrate (skuteczność)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stAnswered">0</div>
+            <div class="stat-label">Wszystkie odpowiedzi</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stCorrect" style="color: var(--green);">0</div>
+            <div class="stat-label">Poprawne</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stWrong" style="color: var(--accent);">0</div>
+            <div class="stat-label">Błędne</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stBestStreak">0</div>
+            <div class="stat-label">Najlepsza seria</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stBestHc">0</div>
+            <div class="stat-label">Rekord Hardcore</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stHcFails">0</div>
+            <div class="stat-label">Resety Hardcore</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="resetStatsBtn">Wyczyść statystyki</button>
+      </div>
+    </div>
   </main>
 
   <script>
+    // BAZA PYTAŃ
+    const QUESTIONS = [
+      // Województwa
+      { cat: 'wojewodztwa', q: 'Które z poniższych to polskie województwo na północy nad morzem?', a: 'Pomorskie', opts: ['Pomorskie', 'Mazowieckie', 'Opolskie', 'Świętokrzyskie'] },
+      { cat: 'wojewodztwa', q: 'Które województwo leży w centralnej Polsce (ze stolicą w Warszawie)?', a: 'Mazowieckie', opts: ['Mazowieckie', 'Lubuskie', 'Podlaskie', 'Dolnośląskie'] },
+      { cat: 'wojewodztwa', q: 'Które województwo leży najbardziej na południu z wymienionych (Tatry)?', a: 'Małopolskie', opts: ['Małopolskie', 'Kujawsko-pomorskie', 'Warmińsko-mazurskie', 'Łódzkie'] },
+      { cat: 'wojewodztwa', q: 'Które województwo graniczy z Niemcami na północnym zachodzie?', a: 'Zachodniopomorskie', opts: ['Zachodniopomorskie', 'Podkarpackie', 'Lubelskie', 'Śląskie'] },
+      { cat: 'wojewodztwa', q: 'Które województwo słynie z Krainy Wielkich Jezior Mazurskich?', a: 'Warmińsko-mazurskie', opts: ['Warmińsko-mazurskie', 'Wielkopolskie', 'Opolskie', 'Świętokrzyskie'] },
+      { cat: 'wojewodztwa', q: 'Które województwo leży przy granicy z Białorusią na północnym wschodzie?', a: 'Podlaskie', opts: ['Podlaskie', 'Lubuskie', 'Dolnośląskie', 'Pomorskie'] },
+      { cat: 'wojewodztwa', q: 'Które województwo leży w południowo-wschodnim rogu Polski (Bieszczady)?', a: 'Podkarpackie', opts: ['Podkarpackie', 'Kujawsko-pomorskie', 'Wielkopolskie', 'Opolskie'] },
+      { cat: 'wojewodztwa', q: 'Najmniejsze powierzchniowo województwo w Polsce to:', a: 'Opolskie', opts: ['Opolskie', 'Mazowieckie', 'Wielkopolskie', 'Lubelskie'] },
+
+      // Sąsiedzi
+      { cat: 'sasiedzi', q: 'Sąsiad Polski od zachodu to:', a: 'Niemcy', opts: ['Niemcy', 'Czechy', 'Litwa', 'Białoruś'] },
+      { cat: 'sasiedzi', q: 'Sąsiad Polski od południowego zachodu to:', a: 'Czechy', opts: ['Czechy', 'Słowacja', 'Ukraina', 'Rosja'] },
+      { cat: 'sasiedzi', q: 'Sąsiad Polski od południa to:', a: 'Słowacja', opts: ['Słowacja', 'Niemcy', 'Litwa', 'Białoruś'] },
+      { cat: 'sasiedzi', q: 'Sąsiad Polski od południowego wschodu to:', a: 'Ukraina', opts: ['Ukraina', 'Czechy', 'Rosja', 'Niemcy'] },
+      { cat: 'sasiedzi', q: 'Sąsiad Polski od wschodu to:', a: 'Białoruś', opts: ['Białoruś', 'Słowacja', 'Czechy', 'Niemcy'] },
+      { cat: 'sasiedzi', q: 'Sąsiad Polski od północnego wschodu to:', a: 'Litwa', opts: ['Litwa', 'Ukraina', 'Słowacja', 'Czechy'] },
+      { cat: 'sasiedzi', q: 'Sąsiad Polski od północy (Obwód Królewiecki) to:', a: 'Rosja', opts: ['Rosja', 'Białoruś', 'Ukraina', 'Słowacja'] },
+
+      // Jeziora
+      { cat: 'jeziora', q: 'Największe jezioro w Polsce (113,4 km²) to:', a: 'Śniardwy', opts: ['Śniardwy', 'Mamry', 'Łebsko', 'Hańcza'] },
+      { cat: 'jeziora', q: 'Drugie co do wielkości jezioro w Polsce (104,4 km²) to:', a: 'Mamry', opts: ['Mamry', 'Śniardwy', 'Dąbie', 'Niegocin'] },
+      { cat: 'jeziora', q: 'Najgłębsze jezioro w Polsce (108,5 m) to:', a: 'Hańcza', opts: ['Hańcza', 'Śniardwy', 'Jeziorak', 'Gardno'] },
+      { cat: 'jeziora', q: 'Największe jezioro przybrzeżne na Wybrzeżu Słowińskim (71,4 km²) to:', a: 'Łebsko', opts: ['Łebsko', 'Miedwie', 'Niegocin', 'Hańcza'] },
+      { cat: 'jeziora', q: 'Jezioro położone w Dolinie Dolnej Odry (56,0 km²) to:', a: 'Dąbie', opts: ['Dąbie', 'Mamry', 'Gardno', 'Jeziorak'] },
+      { cat: 'jeziora', q: 'Najdłuższe jezioro w Polsce na Pojezierzu Iławskim (34,6 km²) to:', a: 'Jeziorak', opts: ['Jeziorak', 'Śniardwy', 'Łebsko', 'Miedwie'] },
+
+      // Rzeki
+      { cat: 'rzeki', q: 'Najdłuższa rzeka Polski (1047 km) to:', a: 'Wisła', opts: ['Wisła', 'Odra', 'Warta', 'Bug'] },
+      { cat: 'rzeki', q: 'Druga najdłuższa rzeka Polski, graniczna z Niemcami (854 km), to:', a: 'Odra', opts: ['Odra', 'Wisła', 'Narew', 'San'] },
+      { cat: 'rzeki', q: 'Największy dopływ Odry (808 km) to:', a: 'Warta', opts: ['Warta', 'Bug', 'Pilica', 'Wieprz'] },
+      { cat: 'rzeki', q: 'Rzeka graniczna na wschodzie, dopływ Narwi (772 km), to:', a: 'Bug', opts: ['Bug', 'Bóbr', 'Noteć', 'San'] },
+      { cat: 'rzeki', q: 'Dopływ Wisły o długości 484 km to:', a: 'Narew', opts: ['Narew', 'Warta', 'Bóbr', 'Noteć'] },
+      { cat: 'rzeki', q: 'Dopływ Warty o długości 388 km to:', a: 'Noteć', opts: ['Noteć', 'San', 'Pilica', 'Wieprz'] },
+
+      // Góry
+      { cat: 'gory', q: 'Najwyższy szczyt Polski (2499 m n.p.m.) to:', a: 'Rysy', opts: ['Rysy', 'Śnieżka', 'Łysica', 'Giewont'] },
+      { cat: 'gory', q: 'Najwyższy szczyt Sudetów i Karkonoszy (1603 m n.p.m.) to:', a: 'Śnieżka', opts: ['Śnieżka', 'Rysy', 'Łysica', 'Tarnica'] },
+      { cat: 'gory', q: 'Najwyższy szczyt Gór Świętokrzyskich (614 m n.p.m.) to:', a: 'Łysica', opts: ['Łysica', 'Śnieżka', 'Rysy', 'Babia Góra'] },
+      { cat: 'gory', q: 'Łańcuch górski w Polsce, w którym leżą Tatry, Bieszczady i Pieniny:', a: 'Karpaty', opts: ['Karpaty', 'Sudety', 'Góry Świętokrzyskie', 'Alpy'] },
+      { cat: 'gory', q: 'Łańcuch górski w południowo-zachodniej Polsce (Karkonosze, Góry Stołowe):', a: 'Sudety', opts: ['Sudety', 'Karpaty', 'Góry Świętokrzyskie', 'Pieniny'] },
+      { cat: 'gory', q: 'Najstarsze góry w Polsce (z pasmem Łysogór) to:', a: 'Góry Świętokrzyskie', opts: ['Góry Świętokrzyskie', 'Tatry', 'Bieszczady', 'Karkonosze'] },
+
+      // Krainy
+      { cat: 'krainy', q: 'Pas rzeźby terenu położony najbardziej na północ nad Bałtykiem to:', a: 'Pobrzeża Południowobałtyckie', opts: ['Pobrzeża Południowobałtyckie', 'Pojezierza', 'Niziny Środkowopolskie', 'Wyżyny Polskie'] },
+      { cat: 'krainy', q: 'Pas z dużą liczbą jezior polodowcowych (Pomorskie, Mazurskie) to:', a: 'Pojezierza', opts: ['Pojezierza', 'Kotliny Podkarpackie', 'Wyżyny Polskie', 'Góry'] },
+      { cat: 'krainy', q: 'Pas obejmujący Nizinę Mazowiecką i Wielkopolską to:', a: 'Niziny Środkowopolskie', opts: ['Niziny Środkowopolskie', 'Pobrzeża Południowobałtyckie', 'Kotliny Podkarpackie', 'Góry'] },
+      { cat: 'krainy', q: 'Pas obejmujący Wyżynę Krakowsko-Częstochowską i Lubelską to:', a: 'Wyżyny Polskie', opts: ['Wyżyny Polskie', 'Pojezierza', 'Niziny Środkowopolskie', 'Pobrzeża Południowobałtyckie'] },
+      { cat: 'krainy', q: 'Pas między Wyżynami a Karpatami (Kotlina Sandomierska i Oświęcimska) to:', a: 'Kotliny Podkarpackie', opts: ['Kotliny Podkarpackie', 'Pojezierza', 'Pobrzeża Południowobałtyckie', 'Niziny Środkowopolskie'] }
+    ];
+
+    // ZAKŁADKI
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const views = document.querySelectorAll('.view');
+    const notesTools = document.getElementById('notes-sidebar-tools');
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        views.forEach(v => v.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.tab;
+        document.getElementById('view-' + target).classList.add('active');
+        notesTools.style.display = target === 'notes' ? '' : 'none';
+        if (target === 'stats') renderStats();
+      });
+    });
+
+    // WYSZUKIWARKA NOTATEK
     const searchInput = document.getElementById('searchInput');
-    const sections = document.querySelectorAll('section');
+    const sections = document.querySelectorAll('#view-notes section');
 
     searchInput.addEventListener('input', function () {
       const query = this.value.toLowerCase().trim();
-
       sections.forEach(section => {
         const items = section.querySelectorAll('li');
-        let hasVisibleItems = false;
-
+        let hasVisible = false;
         items.forEach(item => {
-          const text = item.textContent.toLowerCase();
-          if (text.includes(query)) {
+          if (item.textContent.toLowerCase().includes(query)) {
             item.style.display = '';
-            hasVisibleItems = true;
+            hasVisible = true;
           } else {
             item.style.display = 'none';
           }
         });
-
-        section.style.display = hasVisibleItems ? '' : 'none';
+        section.style.display = hasVisible ? '' : 'none';
       });
     });
+
+    // STATYSTYKI (LOCALSTORAGE)
+    const STATS_KEY = 'mapa_polski_stats_v1';
+    let stats = JSON.parse(localStorage.getItem(STATS_KEY)) || {
+      answered: 0,
+      correct: 0,
+      wrong: 0,
+      bestStreak: 0,
+      bestHc: 0,
+      hcFails: 0
+    };
+
+    function saveStats() {
+      localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    }
+
+    function renderStats() {
+      const winrate = stats.answered > 0 ? Math.round((stats.correct / stats.answered) * 100) : 0;
+      document.getElementById('stWinrate').textContent = winrate + '%';
+      document.getElementById('stAnswered').textContent = stats.answered;
+      document.getElementById('stCorrect').textContent = stats.correct;
+      document.getElementById('stWrong').textContent = stats.wrong;
+      document.getElementById('stBestStreak').textContent = stats.bestStreak;
+      document.getElementById('stBestHc').textContent = stats.bestHc;
+      document.getElementById('stHcFails').textContent = stats.hcFails;
+    }
+
+    document.getElementById('resetStatsBtn').addEventListener('click', () => {
+      stats = { answered: 0, correct: 0, wrong: 0, bestStreak: 0, bestHc: 0, hcFails: 0 };
+      saveStats();
+      renderStats();
+    });
+
+    // LOGIKA TESTU
+    const catSelect = document.getElementById('catSelect');
+    const modeSelect = document.getElementById('modeSelect');
+    const hcCheck = document.getElementById('hcCheck');
+    const hcLabel = document.getElementById('hcLabel');
+    const runCounter = document.getElementById('runCounter');
+    const streakCounter = document.getElementById('streakCounter');
+    const qText = document.getElementById('qText');
+    const optionsContainer = document.getElementById('optionsContainer');
+    const typeContainer = document.getElementById('typeContainer');
+    const typeInput = document.getElementById('typeInput');
+    const submitTypeBtn = document.getElementById('submitTypeBtn');
+    const feedbackBox = document.getElementById('feedbackBox');
+    const nextBtn = document.getElementById('nextBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let pool = [];
+    let currentQ = null;
+    let questionNum = 1;
+    let streak = 0;
+    let answeredCurrent = false;
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function normalize(str) {
+      return str.toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+
+    function buildPool() {
+      const cat = catSelect.value;
+      const filtered = cat === 'all' ? QUESTIONS : QUESTIONS.filter(q => q.cat === cat);
+      pool = shuffle(filtered);
+    }
+
+    function updateMeta() {
+      runCounter.textContent = 'Pytanie w podejściu: ' + questionNum;
+      streakCounter.textContent = 'Seria: ' + streak;
+    }
+
+    function resetRun() {
+      questionNum = 1;
+      streak = 0;
+      buildPool();
+      updateMeta();
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      answeredCurrent = false;
+      feedbackBox.className = 'feedback';
+      feedbackBox.textContent = '';
+      nextBtn.style.display = 'none';
+
+      if (pool.length === 0) buildPool();
+      currentQ = pool.pop();
+
+      qText.textContent = currentQ.q;
+      const mode = modeSelect.value;
+
+      if (mode === 'select') {
+        optionsContainer.style.display = 'grid';
+        typeContainer.style.display = 'none';
+        optionsContainer.innerHTML = '';
+
+        const shuffledOpts = shuffle(currentQ.opts);
+        shuffledOpts.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.className = 'opt-btn';
+          btn.textContent = opt;
+          btn.addEventListener('click', () => handleSelectAnswer(btn, opt));
+          optionsContainer.appendChild(btn);
+        });
+      } else {
+        optionsContainer.style.display = 'none';
+        typeContainer.style.display = 'flex';
+        typeInput.value = '';
+        typeInput.disabled = false;
+        submitTypeBtn.disabled = false;
+        typeInput.focus();
+      }
+    }
+
+    function processResult(isCorrect, userAns) {
+      answeredCurrent = true;
+      stats.answered++;
+
+      if (isCorrect) {
+        stats.correct++;
+        streak++;
+        if (streak > stats.bestStreak) stats.bestStreak = streak;
+        if (hcCheck.checked && streak > stats.bestHc) stats.bestHc = streak;
+        saveStats();
+        updateMeta();
+
+        feedbackBox.className = 'feedback ok';
+        feedbackBox.textContent = 'Dobrze! Poprawna odpowiedź: ' + currentQ.a;
+        nextBtn.style.display = 'inline-block';
+      } else {
+        stats.wrong++;
+        if (hcCheck.checked) {
+          stats.hcFails++;
+          saveStats();
+
+          feedbackBox.className = 'feedback err';
+          feedbackBox.textContent = 'HARDCORE RESET! Błąd (poprawna: ' + currentQ.a + '). Resetowanie podejścia...';
+
+          setTimeout(() => {
+            resetRun();
+          }, 1200);
+        } else {
+          streak = 0;
+          saveStats();
+          updateMeta();
+
+          feedbackBox.className = 'feedback err';
+          feedbackBox.textContent = 'Źle! Poprawna odpowiedź to: ' + currentQ.a;
+          nextBtn.style.display = 'inline-block';
+        }
+      }
+    }
+
+    function handleSelectAnswer(clickedBtn, chosen) {
+      if (answeredCurrent) return;
+      const isCorrect = chosen === currentQ.a;
+      const allBtns = optionsContainer.querySelectorAll('.opt-btn');
+
+      allBtns.forEach(b => {
+        b.disabled = true;
+        if (b.textContent === currentQ.a) b.classList.add('correct');
+      });
+
+      if (!isCorrect) clickedBtn.classList.add('wrong');
+      processResult(isCorrect, chosen);
+    }
+
+    function handleTypeAnswer() {
+      if (answeredCurrent) return;
+      const val = typeInput.value;
+      if (!val.trim()) return;
+
+      typeInput.disabled = true;
+      submitTypeBtn.disabled = true;
+      const isCorrect = normalize(val) === normalize(currentQ.a);
+      processResult(isCorrect, val);
+    }
+
+    submitTypeBtn.addEventListener('click', handleTypeAnswer);
+    typeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleTypeAnswer();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      questionNum++;
+      updateMeta();
+      loadQuestion();
+    });
+
+    restartBtn.addEventListener('click', resetRun);
+    catSelect.addEventListener('change', resetRun);
+    modeSelect.addEventListener('change', loadQuestion);
+
+    hcCheck.addEventListener('change', () => {
+      hcLabel.classList.toggle('active-hc', hcCheck.checked);
+      resetRun();
+    });
+
+    // START
+    resetRun();
   </script>
 </body>
 </html>
