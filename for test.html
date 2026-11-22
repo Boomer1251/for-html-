@@ -44,7 +44,7 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
-      z-index: 10;
+      z-index: 20;
     }
 
     h1 {
@@ -75,7 +75,6 @@
       font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
-      transition: 0.15s;
     }
 
     .tab-btn:hover {
@@ -115,7 +114,6 @@
       font-size: 0.9rem;
       padding: 8px 10px;
       border-radius: 6px;
-      transition: background 0.15s;
     }
 
     nav a:hover {
@@ -127,6 +125,7 @@
       margin-left: 260px;
       flex: 1;
       padding: 20px;
+      min-width: 0;
     }
 
     .view {
@@ -139,7 +138,7 @@
 
     #view-notes.active {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: 16px;
       align-content: start;
     }
@@ -183,7 +182,6 @@
       font-size: 0.85rem;
     }
 
-    /* TEST UI */
     .test-controls {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -196,6 +194,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
       background: var(--bg);
       border: 1px solid var(--border);
       padding: 10px 12px;
@@ -211,6 +210,7 @@
     .hardcore-box input {
       width: 18px;
       height: 18px;
+      flex-shrink: 0;
       accent-color: var(--accent);
       cursor: pointer;
     }
@@ -218,6 +218,7 @@
     .quiz-meta {
       display: flex;
       justify-content: space-between;
+      gap: 10px;
       font-size: 0.88rem;
       color: var(--muted);
       margin-bottom: 12px;
@@ -226,7 +227,7 @@
     }
 
     .question-text {
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       font-weight: 600;
       margin-bottom: 16px;
       color: #ffffff;
@@ -247,7 +248,6 @@
       text-align: left;
       font-size: 0.95rem;
       cursor: pointer;
-      transition: 0.12s;
     }
 
     .opt-btn:hover:not(:disabled) {
@@ -283,7 +283,7 @@
     }
 
     .btn:hover {
-      opacity: 0.9;
+      opacity: 0.92;
     }
 
     .btn-secondary {
@@ -314,7 +314,6 @@
       color: #ef9a9a;
     }
 
-    /* STATS UI */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -386,7 +385,7 @@
         grid-template-columns: 1fr;
       }
 
-      .test-controls {
+      .test-controls, .stats-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -399,10 +398,10 @@
       <p class="subtitle">Kompendium geograficzne</p>
     </div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="notes">Notatki</button>
-      <button class="tab-btn" data-tab="test">Test</button>
-      <button class="tab-btn" data-tab="stats">Statystyki</button>
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="notes">Notatki</button>
+      <button type="button" class="tab-btn" data-tab="test">Test</button>
+      <button type="button" class="tab-btn" data-tab="stats">Statystyki</button>
     </div>
 
     <div id="notes-sidebar-tools">
@@ -419,7 +418,6 @@
   </aside>
 
   <main>
-    <!-- WIDOK 1: NOTATKI -->
     <div id="view-notes" class="view active">
       <section id="wojewodztwa">
         <h2>Województwa (16)</h2>
@@ -515,7 +513,6 @@
       </section>
     </div>
 
-    <!-- WIDOK 2: TEST -->
     <div id="view-test" class="view">
       <div class="panel">
         <h2>Test wiedzy</h2>
@@ -542,7 +539,7 @@
             </select>
           </div>
 
-          <label class="hardcore-box" id="hcLabel">
+          <label class="hardcore-box" id="hcLabel" for="hcCheck">
             <div>
               <strong>Tryb Hardcore</strong>
               <div class="muted">Błędna odpowiedź natychmiast resetuje podejście i serię</div>
@@ -561,18 +558,17 @@
           <div id="optionsContainer" class="options-grid"></div>
           <div id="typeContainer" class="type-box" style="display: none;">
             <input type="text" id="typeInput" placeholder="Wpisz odpowiedź..." autocomplete="off">
-            <button class="btn" id="submitTypeBtn">Sprawdź</button>
+            <button type="button" class="btn" id="submitTypeBtn">Sprawdź</button>
           </div>
           <div id="feedbackBox" class="feedback"></div>
-          <div style="margin-top: 14px; display: flex; gap: 8px;">
-            <button class="btn" id="nextBtn" style="display: none;">Następne pytanie</button>
-            <button class="btn btn-secondary" id="restartBtn">Nowe podejście</button>
+          <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn" id="nextBtn" style="display: none;">Następne pytanie</button>
+            <button type="button" class="btn btn-secondary" id="restartBtn">Nowe podejście</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- WIDOK 3: STATYSTYKI -->
     <div id="view-stats" class="view">
       <div class="panel">
         <h2>Statystyki</h2>
@@ -606,310 +602,331 @@
             <div class="stat-label">Resety Hardcore</div>
           </div>
         </div>
-        <button class="btn btn-secondary" id="resetStatsBtn">Wyczyść statystyki</button>
+        <button type="button" class="btn btn-secondary" id="resetStatsBtn">Wyczyść statystyki</button>
       </div>
     </div>
   </main>
 
   <script>
-    // BAZA PYTAŃ
-    const QUESTIONS = [
-      // Województwa
-      { cat: 'wojewodztwa', q: 'Które z poniższych to polskie województwo na północy nad morzem?', a: 'Pomorskie', opts: ['Pomorskie', 'Mazowieckie', 'Opolskie', 'Świętokrzyskie'] },
-      { cat: 'wojewodztwa', q: 'Które województwo leży w centralnej Polsce (ze stolicą w Warszawie)?', a: 'Mazowieckie', opts: ['Mazowieckie', 'Lubuskie', 'Podlaskie', 'Dolnośląskie'] },
-      { cat: 'wojewodztwa', q: 'Które województwo leży najbardziej na południu z wymienionych (Tatry)?', a: 'Małopolskie', opts: ['Małopolskie', 'Kujawsko-pomorskie', 'Warmińsko-mazurskie', 'Łódzkie'] },
-      { cat: 'wojewodztwa', q: 'Które województwo graniczy z Niemcami na północnym zachodzie?', a: 'Zachodniopomorskie', opts: ['Zachodniopomorskie', 'Podkarpackie', 'Lubelskie', 'Śląskie'] },
-      { cat: 'wojewodztwa', q: 'Które województwo słynie z Krainy Wielkich Jezior Mazurskich?', a: 'Warmińsko-mazurskie', opts: ['Warmińsko-mazurskie', 'Wielkopolskie', 'Opolskie', 'Świętokrzyskie'] },
-      { cat: 'wojewodztwa', q: 'Które województwo leży przy granicy z Białorusią na północnym wschodzie?', a: 'Podlaskie', opts: ['Podlaskie', 'Lubuskie', 'Dolnośląskie', 'Pomorskie'] },
-      { cat: 'wojewodztwa', q: 'Które województwo leży w południowo-wschodnim rogu Polski (Bieszczady)?', a: 'Podkarpackie', opts: ['Podkarpackie', 'Kujawsko-pomorskie', 'Wielkopolskie', 'Opolskie'] },
-      { cat: 'wojewodztwa', q: 'Najmniejsze powierzchniowo województwo w Polsce to:', a: 'Opolskie', opts: ['Opolskie', 'Mazowieckie', 'Wielkopolskie', 'Lubelskie'] },
+    (function () {
+      const QUESTIONS = [
+        { cat: 'wojewodztwa', q: 'Które z poniższych to polskie województwo na północy nad morzem?', a: 'Pomorskie', opts: ['Pomorskie', 'Mazowieckie', 'Opolskie', 'Świętokrzyskie'] },
+        { cat: 'wojewodztwa', q: 'Które województwo leży w centralnej Polsce?', a: 'Mazowieckie', opts: ['Mazowieckie', 'Lubuskie', 'Podlaskie', 'Dolnośląskie'] },
+        { cat: 'wojewodztwa', q: 'Które województwo leży najbardziej na południu z wymienionych?', a: 'Małopolskie', opts: ['Małopolskie', 'Kujawsko-pomorskie', 'Warmińsko-mazurskie', 'Łódzkie'] },
+        { cat: 'wojewodztwa', q: 'Które województwo graniczy z Niemcami na północnym zachodzie?', a: 'Zachodniopomorskie', opts: ['Zachodniopomorskie', 'Podkarpackie', 'Lubelskie', 'Śląskie'] },
+        { cat: 'wojewodztwa', q: 'Które województwo obejmuje Krainę Wielkich Jezior Mazurskich?', a: 'Warmińsko-mazurskie', opts: ['Warmińsko-mazurskie', 'Wielkopolskie', 'Opolskie', 'Świętokrzyskie'] },
+        { cat: 'wojewodztwa', q: 'Które województwo leży przy granicy z Białorusią na północnym wschodzie?', a: 'Podlaskie', opts: ['Podlaskie', 'Lubuskie', 'Dolnośląskie', 'Pomorskie'] },
+        { cat: 'wojewodztwa', q: 'Które województwo leży w południowo-wschodniej Polsce?', a: 'Podkarpackie', opts: ['Podkarpackie', 'Kujawsko-pomorskie', 'Wielkopolskie', 'Opolskie'] },
+        { cat: 'wojewodztwa', q: 'Najmniejsze powierzchniowo województwo w Polsce to:', a: 'Opolskie', opts: ['Opolskie', 'Mazowieckie', 'Wielkopolskie', 'Lubelskie'] },
 
-      // Sąsiedzi
-      { cat: 'sasiedzi', q: 'Sąsiad Polski od zachodu to:', a: 'Niemcy', opts: ['Niemcy', 'Czechy', 'Litwa', 'Białoruś'] },
-      { cat: 'sasiedzi', q: 'Sąsiad Polski od południowego zachodu to:', a: 'Czechy', opts: ['Czechy', 'Słowacja', 'Ukraina', 'Rosja'] },
-      { cat: 'sasiedzi', q: 'Sąsiad Polski od południa to:', a: 'Słowacja', opts: ['Słowacja', 'Niemcy', 'Litwa', 'Białoruś'] },
-      { cat: 'sasiedzi', q: 'Sąsiad Polski od południowego wschodu to:', a: 'Ukraina', opts: ['Ukraina', 'Czechy', 'Rosja', 'Niemcy'] },
-      { cat: 'sasiedzi', q: 'Sąsiad Polski od wschodu to:', a: 'Białoruś', opts: ['Białoruś', 'Słowacja', 'Czechy', 'Niemcy'] },
-      { cat: 'sasiedzi', q: 'Sąsiad Polski od północnego wschodu to:', a: 'Litwa', opts: ['Litwa', 'Ukraina', 'Słowacja', 'Czechy'] },
-      { cat: 'sasiedzi', q: 'Sąsiad Polski od północy (Obwód Królewiecki) to:', a: 'Rosja', opts: ['Rosja', 'Białoruś', 'Ukraina', 'Słowacja'] },
+        { cat: 'sasiedzi', q: 'Sąsiad Polski od zachodu to:', a: 'Niemcy', opts: ['Niemcy', 'Czechy', 'Litwa', 'Białoruś'] },
+        { cat: 'sasiedzi', q: 'Sąsiad Polski od południowego zachodu to:', a: 'Czechy', opts: ['Czechy', 'Słowacja', 'Ukraina', 'Rosja'] },
+        { cat: 'sasiedzi', q: 'Sąsiad Polski od południa to:', a: 'Słowacja', opts: ['Słowacja', 'Niemcy', 'Litwa', 'Białoruś'] },
+        { cat: 'sasiedzi', q: 'Sąsiad Polski od południowego wschodu to:', a: 'Ukraina', opts: ['Ukraina', 'Czechy', 'Rosja', 'Niemcy'] },
+        { cat: 'sasiedzi', q: 'Sąsiad Polski od wschodu to:', a: 'Białoruś', opts: ['Białoruś', 'Słowacja', 'Czechy', 'Niemcy'] },
+        { cat: 'sasiedzi', q: 'Sąsiad Polski od północnego wschodu to:', a: 'Litwa', opts: ['Litwa', 'Ukraina', 'Słowacja', 'Czechy'] },
+        { cat: 'sasiedzi', q: 'Sąsiad Polski od północy (Obwód Królewiecki) to:', a: 'Rosja', opts: ['Rosja', 'Białoruś', 'Ukraina', 'Słowacja'] },
 
-      // Jeziora
-      { cat: 'jeziora', q: 'Największe jezioro w Polsce (113,4 km²) to:', a: 'Śniardwy', opts: ['Śniardwy', 'Mamry', 'Łebsko', 'Hańcza'] },
-      { cat: 'jeziora', q: 'Drugie co do wielkości jezioro w Polsce (104,4 km²) to:', a: 'Mamry', opts: ['Mamry', 'Śniardwy', 'Dąbie', 'Niegocin'] },
-      { cat: 'jeziora', q: 'Najgłębsze jezioro w Polsce (108,5 m) to:', a: 'Hańcza', opts: ['Hańcza', 'Śniardwy', 'Jeziorak', 'Gardno'] },
-      { cat: 'jeziora', q: 'Największe jezioro przybrzeżne na Wybrzeżu Słowińskim (71,4 km²) to:', a: 'Łebsko', opts: ['Łebsko', 'Miedwie', 'Niegocin', 'Hańcza'] },
-      { cat: 'jeziora', q: 'Jezioro położone w Dolinie Dolnej Odry (56,0 km²) to:', a: 'Dąbie', opts: ['Dąbie', 'Mamry', 'Gardno', 'Jeziorak'] },
-      { cat: 'jeziora', q: 'Najdłuższe jezioro w Polsce na Pojezierzu Iławskim (34,6 km²) to:', a: 'Jeziorak', opts: ['Jeziorak', 'Śniardwy', 'Łebsko', 'Miedwie'] },
+        { cat: 'jeziora', q: 'Największe jezioro w Polsce (113,4 km²) to:', a: 'Śniardwy', opts: ['Śniardwy', 'Mamry', 'Łebsko', 'Hańcza'] },
+        { cat: 'jeziora', q: 'Drugie co do wielkości jezioro w Polsce (104,4 km²) to:', a: 'Mamry', opts: ['Mamry', 'Śniardwy', 'Dąbie', 'Niegocin'] },
+        { cat: 'jeziora', q: 'Najgłębsze jezioro w Polsce (108,5 m) to:', a: 'Hańcza', opts: ['Hańcza', 'Śniardwy', 'Jeziorak', 'Gardno'] },
+        { cat: 'jeziora', q: 'Największe jezioro przybrzeżne na Wybrzeżu Słowińskim (71,4 km²) to:', a: 'Łebsko', opts: ['Łebsko', 'Miedwie', 'Niegocin', 'Hańcza'] },
+        { cat: 'jeziora', q: 'Jezioro położone w Dolinie Dolnej Odry (56,0 km²) to:', a: 'Dąbie', opts: ['Dąbie', 'Mamry', 'Gardno', 'Jeziorak'] },
+        { cat: 'jeziora', q: 'Jezioro na Pojezierzu Iławskim (34,6 km²) to:', a: 'Jeziorak', opts: ['Jeziorak', 'Śniardwy', 'Łebsko', 'Miedwie'] },
 
-      // Rzeki
-      { cat: 'rzeki', q: 'Najdłuższa rzeka Polski (1047 km) to:', a: 'Wisła', opts: ['Wisła', 'Odra', 'Warta', 'Bug'] },
-      { cat: 'rzeki', q: 'Druga najdłuższa rzeka Polski, graniczna z Niemcami (854 km), to:', a: 'Odra', opts: ['Odra', 'Wisła', 'Narew', 'San'] },
-      { cat: 'rzeki', q: 'Największy dopływ Odry (808 km) to:', a: 'Warta', opts: ['Warta', 'Bug', 'Pilica', 'Wieprz'] },
-      { cat: 'rzeki', q: 'Rzeka graniczna na wschodzie, dopływ Narwi (772 km), to:', a: 'Bug', opts: ['Bug', 'Bóbr', 'Noteć', 'San'] },
-      { cat: 'rzeki', q: 'Dopływ Wisły o długości 484 km to:', a: 'Narew', opts: ['Narew', 'Warta', 'Bóbr', 'Noteć'] },
-      { cat: 'rzeki', q: 'Dopływ Warty o długości 388 km to:', a: 'Noteć', opts: ['Noteć', 'San', 'Pilica', 'Wieprz'] },
+        { cat: 'rzeki', q: 'Najdłuższa rzeka Polski (1047 km) to:', a: 'Wisła', opts: ['Wisła', 'Odra', 'Warta', 'Bug'] },
+        { cat: 'rzeki', q: 'Druga najdłuższa rzeka Polski (854 km) to:', a: 'Odra', opts: ['Odra', 'Wisła', 'Narew', 'San'] },
+        { cat: 'rzeki', q: 'Największy dopływ Odry (808 km) to:', a: 'Warta', opts: ['Warta', 'Bug', 'Pilica', 'Wieprz'] },
+        { cat: 'rzeki', q: 'Rzeka na wschodzie, dopływ Narwi (772 km), to:', a: 'Bug', opts: ['Bug', 'Bóbr', 'Noteć', 'San'] },
+        { cat: 'rzeki', q: 'Dopływ Wisły o długości 484 km to:', a: 'Narew', opts: ['Narew', 'Warta', 'Bóbr', 'Noteć'] },
+        { cat: 'rzeki', q: 'Dopływ Warty o długości 388 km to:', a: 'Noteć', opts: ['Noteć', 'San', 'Pilica', 'Wieprz'] },
 
-      // Góry
-      { cat: 'gory', q: 'Najwyższy szczyt Polski (2499 m n.p.m.) to:', a: 'Rysy', opts: ['Rysy', 'Śnieżka', 'Łysica', 'Giewont'] },
-      { cat: 'gory', q: 'Najwyższy szczyt Sudetów i Karkonoszy (1603 m n.p.m.) to:', a: 'Śnieżka', opts: ['Śnieżka', 'Rysy', 'Łysica', 'Tarnica'] },
-      { cat: 'gory', q: 'Najwyższy szczyt Gór Świętokrzyskich (614 m n.p.m.) to:', a: 'Łysica', opts: ['Łysica', 'Śnieżka', 'Rysy', 'Babia Góra'] },
-      { cat: 'gory', q: 'Łańcuch górski w Polsce, w którym leżą Tatry, Bieszczady i Pieniny:', a: 'Karpaty', opts: ['Karpaty', 'Sudety', 'Góry Świętokrzyskie', 'Alpy'] },
-      { cat: 'gory', q: 'Łańcuch górski w południowo-zachodniej Polsce (Karkonosze, Góry Stołowe):', a: 'Sudety', opts: ['Sudety', 'Karpaty', 'Góry Świętokrzyskie', 'Pieniny'] },
-      { cat: 'gory', q: 'Najstarsze góry w Polsce (z pasmem Łysogór) to:', a: 'Góry Świętokrzyskie', opts: ['Góry Świętokrzyskie', 'Tatry', 'Bieszczady', 'Karkonosze'] },
+        { cat: 'gory', q: 'Najwyższy szczyt Polski (2499 m n.p.m.) to:', a: 'Rysy', opts: ['Rysy', 'Śnieżka', 'Łysica', 'Giewont'] },
+        { cat: 'gory', q: 'Najwyższy szczyt Sudetów (1603 m n.p.m.) to:', a: 'Śnieżka', opts: ['Śnieżka', 'Rysy', 'Łysica', 'Tarnica'] },
+        { cat: 'gory', q: 'Najwyższy szczyt Gór Świętokrzyskich (614 m n.p.m.) to:', a: 'Łysica', opts: ['Łysica', 'Śnieżka', 'Rysy', 'Babia Góra'] },
+        { cat: 'gory', q: 'Łańcuch górski w Polsce, w którym leżą Tatry i Bieszczady:', a: 'Karpaty', opts: ['Karpaty', 'Sudety', 'Góry Świętokrzyskie', 'Alpy'] },
+        { cat: 'gory', q: 'Łańcuch górski w południowo-zachodniej Polsce (Karkonosze):', a: 'Sudety', opts: ['Sudety', 'Karpaty', 'Góry Świętokrzyskie', 'Pieniny'] },
+        { cat: 'gory', q: 'Najstarsze góry w Polsce (z pasmem Łysogór) to:', a: 'Góry Świętokrzyskie', opts: ['Góry Świętokrzyskie', 'Tatry', 'Bieszczady', 'Karkonosze'] },
 
-      // Krainy
-      { cat: 'krainy', q: 'Pas rzeźby terenu położony najbardziej na północ nad Bałtykiem to:', a: 'Pobrzeża Południowobałtyckie', opts: ['Pobrzeża Południowobałtyckie', 'Pojezierza', 'Niziny Środkowopolskie', 'Wyżyny Polskie'] },
-      { cat: 'krainy', q: 'Pas z dużą liczbą jezior polodowcowych (Pomorskie, Mazurskie) to:', a: 'Pojezierza', opts: ['Pojezierza', 'Kotliny Podkarpackie', 'Wyżyny Polskie', 'Góry'] },
-      { cat: 'krainy', q: 'Pas obejmujący Nizinę Mazowiecką i Wielkopolską to:', a: 'Niziny Środkowopolskie', opts: ['Niziny Środkowopolskie', 'Pobrzeża Południowobałtyckie', 'Kotliny Podkarpackie', 'Góry'] },
-      { cat: 'krainy', q: 'Pas obejmujący Wyżynę Krakowsko-Częstochowską i Lubelską to:', a: 'Wyżyny Polskie', opts: ['Wyżyny Polskie', 'Pojezierza', 'Niziny Środkowopolskie', 'Pobrzeża Południowobałtyckie'] },
-      { cat: 'krainy', q: 'Pas między Wyżynami a Karpatami (Kotlina Sandomierska i Oświęcimska) to:', a: 'Kotliny Podkarpackie', opts: ['Kotliny Podkarpackie', 'Pojezierza', 'Pobrzeża Południowobałtyckie', 'Niziny Środkowopolskie'] }
-    ];
+        { cat: 'krainy', q: 'Pas rzeźby terenu najbardziej na północ nad Bałtykiem to:', a: 'Pobrzeża Południowobałtyckie', opts: ['Pobrzeża Południowobałtyckie', 'Pojezierza', 'Niziny Środkowopolskie', 'Wyżyny Polskie'] },
+        { cat: 'krainy', q: 'Pas z dużą liczbą jezior polodowcowych (Pomorskie, Mazurskie) to:', a: 'Pojezierza', opts: ['Pojezierza', 'Kotliny Podkarpackie', 'Wyżyny Polskie', 'Góry'] },
+        { cat: 'krainy', q: 'Pas obejmujący Nizinę Mazowiecką i Wielkopolską to:', a: 'Niziny Środkowopolskie', opts: ['Niziny Środkowopolskie', 'Pobrzeża Południowobałtyckie', 'Kotliny Podkarpackie', 'Góry'] },
+        { cat: 'krainy', q: 'Pas obejmujący Wyżynę Krakowsko-Częstochowską i Lubelską to:', a: 'Wyżyny Polskie', opts: ['Wyżyny Polskie', 'Pojezierza', 'Niziny Środkowopolskie', 'Pobrzeża Południowobałtyckie'] },
+        { cat: 'krainy', q: 'Pas z Kotliną Sandomierską i Oświęcimską to:', a: 'Kotliny Podkarpackie', opts: ['Kotliny Podkarpackie', 'Pojezierza', 'Pobrzeża Południowobałtyckie', 'Niziny Środkowopolskie'] }
+      ];
 
-    // ZAKŁADKI
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const views = document.querySelectorAll('.view');
-    const notesTools = document.getElementById('notes-sidebar-tools');
+      let memoryStats = {
+        answered: 0,
+        correct: 0,
+        wrong: 0,
+        bestStreak: 0,
+        bestHc: 0,
+        hcFails: 0
+      };
 
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        views.forEach(v => v.classList.remove('active'));
-        btn.classList.add('active');
-        const target = btn.dataset.tab;
-        document.getElementById('view-' + target).classList.add('active');
-        notesTools.style.display = target === 'notes' ? '' : 'none';
-        if (target === 'stats') renderStats();
-      });
-    });
-
-    // WYSZUKIWARKA NOTATEK
-    const searchInput = document.getElementById('searchInput');
-    const sections = document.querySelectorAll('#view-notes section');
-
-    searchInput.addEventListener('input', function () {
-      const query = this.value.toLowerCase().trim();
-      sections.forEach(section => {
-        const items = section.querySelectorAll('li');
-        let hasVisible = false;
-        items.forEach(item => {
-          if (item.textContent.toLowerCase().includes(query)) {
-            item.style.display = '';
-            hasVisible = true;
-          } else {
-            item.style.display = 'none';
+      function loadStats() {
+        try {
+          const raw = window.localStorage.getItem('mapa_polski_stats_v2');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            memoryStats = Object.assign({}, memoryStats, parsed);
           }
+        } catch (_) {}
+      }
+
+      function saveStats() {
+        try {
+          window.localStorage.setItem('mapa_polski_stats_v2', JSON.stringify(memoryStats));
+        } catch (_) {}
+      }
+
+      loadStats();
+
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const views = document.querySelectorAll('.view');
+      const notesTools = document.getElementById('notes-sidebar-tools');
+
+      function openTab(tabName) {
+        tabBtns.forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
         });
-        section.style.display = hasVisible ? '' : 'none';
+        views.forEach(view => {
+          view.classList.toggle('active', view.id === 'view-' + tabName);
+        });
+        notesTools.style.display = tabName === 'notes' ? '' : 'none';
+        if (tabName === 'stats') {
+          renderStats();
+        }
+      }
+
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
+          openTab(this.getAttribute('data-tab'));
+        });
       });
-    });
 
-    // STATYSTYKI (LOCALSTORAGE)
-    const STATS_KEY = 'mapa_polski_stats_v1';
-    let stats = JSON.parse(localStorage.getItem(STATS_KEY)) || {
-      answered: 0,
-      correct: 0,
-      wrong: 0,
-      bestStreak: 0,
-      bestHc: 0,
-      hcFails: 0
-    };
+      const searchInput = document.getElementById('searchInput');
+      const sections = document.querySelectorAll('#view-notes section');
 
-    function saveStats() {
-      localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-    }
-
-    function renderStats() {
-      const winrate = stats.answered > 0 ? Math.round((stats.correct / stats.answered) * 100) : 0;
-      document.getElementById('stWinrate').textContent = winrate + '%';
-      document.getElementById('stAnswered').textContent = stats.answered;
-      document.getElementById('stCorrect').textContent = stats.correct;
-      document.getElementById('stWrong').textContent = stats.wrong;
-      document.getElementById('stBestStreak').textContent = stats.bestStreak;
-      document.getElementById('stBestHc').textContent = stats.bestHc;
-      document.getElementById('stHcFails').textContent = stats.hcFails;
-    }
-
-    document.getElementById('resetStatsBtn').addEventListener('click', () => {
-      stats = { answered: 0, correct: 0, wrong: 0, bestStreak: 0, bestHc: 0, hcFails: 0 };
-      saveStats();
-      renderStats();
-    });
-
-    // LOGIKA TESTU
-    const catSelect = document.getElementById('catSelect');
-    const modeSelect = document.getElementById('modeSelect');
-    const hcCheck = document.getElementById('hcCheck');
-    const hcLabel = document.getElementById('hcLabel');
-    const runCounter = document.getElementById('runCounter');
-    const streakCounter = document.getElementById('streakCounter');
-    const qText = document.getElementById('qText');
-    const optionsContainer = document.getElementById('optionsContainer');
-    const typeContainer = document.getElementById('typeContainer');
-    const typeInput = document.getElementById('typeInput');
-    const submitTypeBtn = document.getElementById('submitTypeBtn');
-    const feedbackBox = document.getElementById('feedbackBox');
-    const nextBtn = document.getElementById('nextBtn');
-    const restartBtn = document.getElementById('restartBtn');
-
-    let pool = [];
-    let currentQ = null;
-    let questionNum = 1;
-    let streak = 0;
-    let answeredCurrent = false;
-
-    function shuffle(arr) {
-      const copy = [...arr];
-      for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    function normalize(str) {
-      return str.toLowerCase().trim().replace(/\s+/g, ' ');
-    }
-
-    function buildPool() {
-      const cat = catSelect.value;
-      const filtered = cat === 'all' ? QUESTIONS : QUESTIONS.filter(q => q.cat === cat);
-      pool = shuffle(filtered);
-    }
-
-    function updateMeta() {
-      runCounter.textContent = 'Pytanie w podejściu: ' + questionNum;
-      streakCounter.textContent = 'Seria: ' + streak;
-    }
-
-    function resetRun() {
-      questionNum = 1;
-      streak = 0;
-      buildPool();
-      updateMeta();
-      loadQuestion();
-    }
-
-    function loadQuestion() {
-      answeredCurrent = false;
-      feedbackBox.className = 'feedback';
-      feedbackBox.textContent = '';
-      nextBtn.style.display = 'none';
-
-      if (pool.length === 0) buildPool();
-      currentQ = pool.pop();
-
-      qText.textContent = currentQ.q;
-      const mode = modeSelect.value;
-
-      if (mode === 'select') {
-        optionsContainer.style.display = 'grid';
-        typeContainer.style.display = 'none';
-        optionsContainer.innerHTML = '';
-
-        const shuffledOpts = shuffle(currentQ.opts);
-        shuffledOpts.forEach(opt => {
-          const btn = document.createElement('button');
-          btn.className = 'opt-btn';
-          btn.textContent = opt;
-          btn.addEventListener('click', () => handleSelectAnswer(btn, opt));
-          optionsContainer.appendChild(btn);
+      searchInput.addEventListener('input', function () {
+        const query = this.value.toLowerCase().trim();
+        sections.forEach(section => {
+          const items = section.querySelectorAll('li');
+          let hasVisible = false;
+          items.forEach(item => {
+            const match = item.textContent.toLowerCase().includes(query);
+            item.style.display = match ? '' : 'none';
+            if (match) hasVisible = true;
+          });
+          section.style.display = hasVisible ? '' : 'none';
         });
-      } else {
-        optionsContainer.style.display = 'none';
-        typeContainer.style.display = 'flex';
-        typeInput.value = '';
-        typeInput.disabled = false;
-        submitTypeBtn.disabled = false;
-        typeInput.focus();
+      });
+
+      function renderStats() {
+        const winrate = memoryStats.answered > 0
+          ? Math.round((memoryStats.correct / memoryStats.answered) * 100)
+          : 0;
+        document.getElementById('stWinrate').textContent = winrate + '%';
+        document.getElementById('stAnswered').textContent = memoryStats.answered;
+        document.getElementById('stCorrect').textContent = memoryStats.correct;
+        document.getElementById('stWrong').textContent = memoryStats.wrong;
+        document.getElementById('stBestStreak').textContent = memoryStats.bestStreak;
+        document.getElementById('stBestHc').textContent = memoryStats.bestHc;
+        document.getElementById('stHcFails').textContent = memoryStats.hcFails;
       }
-    }
 
-    function processResult(isCorrect, userAns) {
-      answeredCurrent = true;
-      stats.answered++;
-
-      if (isCorrect) {
-        stats.correct++;
-        streak++;
-        if (streak > stats.bestStreak) stats.bestStreak = streak;
-        if (hcCheck.checked && streak > stats.bestHc) stats.bestHc = streak;
+      document.getElementById('resetStatsBtn').addEventListener('click', () => {
+        memoryStats = {
+          answered: 0,
+          correct: 0,
+          wrong: 0,
+          bestStreak: 0,
+          bestHc: 0,
+          hcFails: 0
+        };
         saveStats();
+        renderStats();
+      });
+
+      const catSelect = document.getElementById('catSelect');
+      const modeSelect = document.getElementById('modeSelect');
+      const hcCheck = document.getElementById('hcCheck');
+      const hcLabel = document.getElementById('hcLabel');
+      const runCounter = document.getElementById('runCounter');
+      const streakCounter = document.getElementById('streakCounter');
+      const qText = document.getElementById('qText');
+      const optionsContainer = document.getElementById('optionsContainer');
+      const typeContainer = document.getElementById('typeContainer');
+      const typeInput = document.getElementById('typeInput');
+      const submitTypeBtn = document.getElementById('submitTypeBtn');
+      const feedbackBox = document.getElementById('feedbackBox');
+      const nextBtn = document.getElementById('nextBtn');
+      const restartBtn = document.getElementById('restartBtn');
+
+      let pool = [];
+      let currentQ = null;
+      let questionNum = 1;
+      let streak = 0;
+      let answeredCurrent = false;
+      let hcTimer = null;
+
+      function shuffle(arr) {
+        const copy = arr.slice();
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = copy[i];
+          copy[i] = copy[j];
+          copy[j] = tmp;
+        }
+        return copy;
+      }
+
+      function normalize(str) {
+        return str.toLowerCase().trim().replace(/\s+/g, ' ');
+      }
+
+      function buildPool() {
+        const cat = catSelect.value;
+        const filtered = cat === 'all' ? QUESTIONS : QUESTIONS.filter(q => q.cat === cat);
+        pool = shuffle(filtered);
+      }
+
+      function updateMeta() {
+        runCounter.textContent = 'Pytanie w podejściu: ' + questionNum;
+        streakCounter.textContent = 'Seria: ' + streak;
+      }
+
+      function resetRun() {
+        if (hcTimer) {
+          clearTimeout(hcTimer);
+          hcTimer = null;
+        }
+        questionNum = 1;
+        streak = 0;
+        buildPool();
         updateMeta();
+        loadQuestion();
+      }
 
-        feedbackBox.className = 'feedback ok';
-        feedbackBox.textContent = 'Dobrze! Poprawna odpowiedź: ' + currentQ.a;
-        nextBtn.style.display = 'inline-block';
-      } else {
-        stats.wrong++;
-        if (hcCheck.checked) {
-          stats.hcFails++;
-          saveStats();
+      function loadQuestion() {
+        answeredCurrent = false;
+        feedbackBox.className = 'feedback';
+        feedbackBox.textContent = '';
+        nextBtn.style.display = 'none';
 
-          feedbackBox.className = 'feedback err';
-          feedbackBox.textContent = 'HARDCORE RESET! Błąd (poprawna: ' + currentQ.a + '). Resetowanie podejścia...';
+        if (pool.length === 0) buildPool();
+        currentQ = pool.pop();
 
-          setTimeout(() => {
-            resetRun();
-          }, 1200);
+        qText.textContent = currentQ.q;
+        const mode = modeSelect.value;
+
+        if (mode === 'select') {
+          optionsContainer.style.display = 'grid';
+          typeContainer.style.display = 'none';
+          optionsContainer.innerHTML = '';
+
+          shuffle(currentQ.opts).forEach(opt => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'opt-btn';
+            btn.textContent = opt;
+            btn.addEventListener('click', () => handleSelectAnswer(btn, opt));
+            optionsContainer.appendChild(btn);
+          });
         } else {
-          streak = 0;
+          optionsContainer.style.display = 'none';
+          typeContainer.style.display = 'flex';
+          typeInput.value = '';
+          typeInput.disabled = false;
+          submitTypeBtn.disabled = false;
+        }
+      }
+
+      function processResult(isCorrect) {
+        answeredCurrent = true;
+        memoryStats.answered += 1;
+
+        if (isCorrect) {
+          memoryStats.correct += 1;
+          streak += 1;
+          if (streak > memoryStats.bestStreak) memoryStats.bestStreak = streak;
+          if (hcCheck.checked && streak > memoryStats.bestHc) memoryStats.bestHc = streak;
           saveStats();
           updateMeta();
 
-          feedbackBox.className = 'feedback err';
-          feedbackBox.textContent = 'Źle! Poprawna odpowiedź to: ' + currentQ.a;
+          feedbackBox.className = 'feedback ok';
+          feedbackBox.textContent = 'Dobrze! Poprawna odpowiedź: ' + currentQ.a;
           nextBtn.style.display = 'inline-block';
+        } else {
+          memoryStats.wrong += 1;
+          if (hcCheck.checked) {
+            memoryStats.hcFails += 1;
+            saveStats();
+
+            feedbackBox.className = 'feedback err';
+            feedbackBox.textContent = 'HARDCORE RESET! Błąd (poprawna: ' + currentQ.a + '). Resetowanie podejścia...';
+
+            hcTimer = setTimeout(() => {
+              resetRun();
+            }, 1100);
+          } else {
+            streak = 0;
+            saveStats();
+            updateMeta();
+
+            feedbackBox.className = 'feedback err';
+            feedbackBox.textContent = 'Źle! Poprawna odpowiedź to: ' + currentQ.a;
+            nextBtn.style.display = 'inline-block';
+          }
         }
       }
-    }
 
-    function handleSelectAnswer(clickedBtn, chosen) {
-      if (answeredCurrent) return;
-      const isCorrect = chosen === currentQ.a;
-      const allBtns = optionsContainer.querySelectorAll('.opt-btn');
+      function handleSelectAnswer(clickedBtn, chosen) {
+        if (answeredCurrent) return;
+        const isCorrect = chosen === currentQ.a;
+        const allBtns = optionsContainer.querySelectorAll('.opt-btn');
 
-      allBtns.forEach(b => {
-        b.disabled = true;
-        if (b.textContent === currentQ.a) b.classList.add('correct');
+        allBtns.forEach(b => {
+          b.disabled = true;
+          if (b.textContent === currentQ.a) b.classList.add('correct');
+        });
+
+        if (!isCorrect) clickedBtn.classList.add('wrong');
+        processResult(isCorrect);
+      }
+
+      function handleTypeAnswer() {
+        if (answeredCurrent) return;
+        const val = typeInput.value;
+        if (!val.trim()) return;
+
+        typeInput.disabled = true;
+        submitTypeBtn.disabled = true;
+        processResult(normalize(val) === normalize(currentQ.a));
+      }
+
+      submitTypeBtn.addEventListener('click', handleTypeAnswer);
+      typeInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleTypeAnswer();
       });
 
-      if (!isCorrect) clickedBtn.classList.add('wrong');
-      processResult(isCorrect, chosen);
-    }
+      nextBtn.addEventListener('click', () => {
+        questionNum += 1;
+        updateMeta();
+        loadQuestion();
+      });
 
-    function handleTypeAnswer() {
-      if (answeredCurrent) return;
-      const val = typeInput.value;
-      if (!val.trim()) return;
+      restartBtn.addEventListener('click', resetRun);
+      catSelect.addEventListener('change', resetRun);
+      modeSelect.addEventListener('change', loadQuestion);
 
-      typeInput.disabled = true;
-      submitTypeBtn.disabled = true;
-      const isCorrect = normalize(val) === normalize(currentQ.a);
-      processResult(isCorrect, val);
-    }
+      hcCheck.addEventListener('change', () => {
+        hcLabel.classList.toggle('active-hc', hcCheck.checked);
+        resetRun();
+      });
 
-    submitTypeBtn.addEventListener('click', handleTypeAnswer);
-    typeInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleTypeAnswer();
-    });
-
-    nextBtn.addEventListener('click', () => {
-      questionNum++;
-      updateMeta();
-      loadQuestion();
-    });
-
-    restartBtn.addEventListener('click', resetRun);
-    catSelect.addEventListener('change', resetRun);
-    modeSelect.addEventListener('change', loadQuestion);
-
-    hcCheck.addEventListener('change', () => {
-      hcLabel.classList.toggle('active-hc', hcCheck.checked);
       resetRun();
-    });
-
-    // START
-    resetRun();
+    })();
   </script>
 </body>
 </html>
