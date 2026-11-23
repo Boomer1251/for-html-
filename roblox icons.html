@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Roblox GFX Drawer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; user-select: none; }
+  body { background: #121316; color: #eee; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  
+  header { height: 48px; background: #1a1c20; border-bottom: 1px solid #2a2d34; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+  .brand { font-weight: 800; font-size: 14px; letter-spacing: 0.5px; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .ratio-btns { display: flex; gap: 6px; background: #121316; padding: 4px; border-radius: 6px; }
+  .ratio-btn { background: transparent; border: none; color: #888; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .ratio-btn.active { background: #2c303a; color: #fff; }
+  .actions { display: flex; gap: 8px; align-items: center; }
+  .act-btn { background: #262930; border: 1px solid #353942; color: #eee; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .act-btn:hover { background: #323640; }
+  .act-btn.toggle-on { background: #00e67622; border-color: #00e676; color: #00e676; }
+  .act-btn.primary { background: #00a2ff; border-color: #00a2ff; color: #fff; }
+  .act-btn.primary:hover { background: #0088d6; }
+
+  .workspace { flex: 1; display: flex; overflow: hidden; }
+  
+  .toolbar { width: 58px; background: #1a1c20; border-right: 1px solid #2a2d34; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 6px; overflow-y: auto; }
+  .tool { width: 38px; height: 38px; flex-shrink: 0; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #9aa0aa; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.12s; }
+  .tool:hover { background: #262930; color: #fff; }
+  .tool.active { background: #00a2ff22; border-color: #00a2ff; color: #00a2ff; }
+  .tool svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .divider { width: 28px; height: 1px; background: #2a2d34; margin: 2px 0; flex-shrink: 0; }
+
+  .stage { flex: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(#23262e 1px, #121316 1px); background-size: 20px 20px; padding: 24px; position: relative; }
+  .canvas-wrap { position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.75); border: 1px solid #353942; background-image: linear-gradient(45deg, #1e2025 25%, transparent 25%), linear-gradient(-45deg, #1e2025 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e2025 75%), linear-gradient(-45deg, transparent 75%, #1e2025 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0; background-color: #16181c; }
+  canvas { display: block; max-width: 100%; max-height: calc(100vh - 130px); cursor: crosshair; }
+  #guideCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  footer { height: 48px; background: #1a1c20; border-top: 1px solid #2a2d34; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 0 16px; font-size: 12px; color: #aaa; }
+  .prop { display: flex; align-items: center; gap: 8px; }
+  input[type="color"] { -webkit-appearance: none; border: none; width: 26px; height: 26px; border-radius: 6px; background: none; cursor: pointer; }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: 2px solid #353942; border-radius: 6px; }
+  input[type="range"] { width: 85px; accent-color: #00a2ff; cursor: pointer; }
+  select { background: #262930; color: #eee; border: 1px solid #353942; border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; }
+  .swatches { display: flex; gap: 5px; }
+  .swatch { width: 18px; height: 18px; border-radius: 4px; cursor: pointer; border: 1px solid #353942; }
+  .swatch:hover { transform: scale(1.15); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#00a2ff"><path d="M5.5 2L22 6.5 18.5 22 2 17.5 5.5 2zm5.8 7.5l-1.3 4.8 4.8 1.3 1.3-4.8-4.8-1.3z"/></svg>
+    ROBLOX GFX STUDIO
+  </div>
+  <div class="ratio-btns">
+    <button class="ratio-btn active" id="btnThumb" onclick="setRatio(1920, 1080, 'btnThumb')">Thumbnail (16:9)</button>
+    <button class="ratio-btn" id="btnIcon" onclick="setRatio(512, 512, 'btnIcon')">Icon (1:1)</button>
+  </div>
+  <div class="actions">
+    <button class="act-btn" id="btn3dLock" onclick="toggle3dLock()" title="Locks Brush & Line tools onto exact 3D angles + shows 3D grid">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      3D Axis Lock: OFF
+    </button>
+    <button class="act-btn" onclick="undo()" title="Ctrl+Z">Undo</button>
+    <button class="act-btn" onclick="clearCanvas()">Clear</button>
+    <button class="act-btn" onclick="triggerImport()">Import</button>
+    <button class="act-btn primary" onclick="exportPNG()">Export PNG</button>
+    <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="importImage(event)">
+  </div>
+</header>
+
+<div class="workspace">
+  <div class="toolbar">
+    <!-- Brush -->
+    <button class="tool active" data-tool="brush" title="Brush (Locks to 3D axes when 3D Axis Lock is ON)">
+      <svg viewBox="0 0 24 24"><path d="M18 3a3 3 0 0 1 3 3L9 18l-4 1 1-4L18 3z"/></svg>
+    </button>
+    <!-- Glow / Neon Brush -->
+    <button class="tool" data-tool="glow" title="Neon GFX Glow">
+      <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <!-- Straight Line -->
+    <button class="tool" data-tool="line" title="Straight Line (Snaps to 3D axes when 3D Axis Lock is ON)">
+      <svg viewBox="0 0 24 24"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5" fill="currentColor"/><circle cx="19" cy="5" r="1.5" fill="currentColor"/></svg>
+    </button>
+    <!-- 3D Figure Maker -->
+    <button class="tool" data-tool="shape3d" title="3D Figure Maker (Auto-builds 3D shapes)">
+      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    </button>
+    <!-- Speedlines / Anime Burst -->
+    <button class="tool" data-tool="burst" title="Action Speedlines (Click focal point)">
+      <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </button>
+    <!-- Gradient Sky/Backdrop -->
+    <button class="tool" data-tool="gradient" title="Drag Gradient Backdrop">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="15" x2="21" y2="9"/></svg>
+    </button>
+    <div class="divider"></div>
+    <!-- Box / Frame -->
+    <button class="tool" data-tool="rect" title="Rectangle">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+    </button>
+    <!-- Circle -->
+    <button class="tool" data-tool="circle" title="Circle">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
+    </button>
+    <!-- Bold Game Text -->
+    <button class="tool" data-tool="text" title="Roblox Outlined Text (Click to place)">
+      <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+    </button>
+    <div class="divider"></div>
+    <!-- Fill Bucket -->
+    <button class="tool" data-tool="fill" title="Fill Background">
+      <svg viewBox="0 0 24 24"><path d="M19 11l-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11z"/><path d="M20 15s2 2.2 2 3.5a2 2 0 0 1-4 0c0-1.3 2-3.5 2-3.5z"/></svg>
+    </button>
+    <!-- Eyedropper -->
+    <button class="tool" data-tool="picker" title="Color Picker">
+      <svg viewBox="0 0 24 24"><path d="M2 22l1-1h3l9-9M3 21v-3l9-9m3-3l3-3 3 3-3 3m-4-2l3 3"/></svg>
+    </button>
+    <!-- Eraser -->
+    <button class="tool" data-tool="eraser" title="Eraser">
+      <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8L13.4 2.8c.8-.8 2-.8 2.8 0L21 7.6c.8.8.8 2 0 2.8L11 20"/></svg>
+    </button>
+  </div>
+
+  <div class="stage">
+    <div class="canvas-wrap">
+      <canvas id="c" width="1920" height="1080"></canvas>
+      <!-- Non-exported overlay canvas for 3D guidelines & angle previews -->
+      <canvas id="guideCanvas" width="1920" height="1080"></canvas>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="prop">
+    <span>Primary</span>
+    <input type="color" id="color1" value="#00a2ff">
+    <span>Secondary</span>
+    <input type="color" id="color2" value="#ff2a6d">
+    <div class="swatches" id="swatches"></div>
+  </div>
+  <div class="prop" id="lockModeProp" style="display:none;">
+    <span>3D Angle</span>
+    <select id="lockMode" onchange="draw3DGrid()">
+      <option value="oblique">Oblique (Up/Down + Left/Right + 35° Depth)</option>
+      <option value="iso">Isometric (30° Left / 30° Right / Vertical)</option>
+    </select>
+  </div>
+  <div class="prop" id="shape3dProp" style="display:none;">
+    <span>3D Type</span>
+    <select id="shape3dType">
+      <option value="cube">3D Cube / Stud</option>
+      <option value="dummy">3D Roblox Dummy</option>
+      <option value="cylinder">3D Cylinder</option>
+      <option value="pyramid">3D Pyramid</option>
+    </select>
+  </div>
+  <div class="prop">
+    <span>Size</span>
+    <input type="range" id="size" min="2" max="150" value="18">
+    <span id="sizeVal" style="width:28px">18</span>
+  </div>
+  <div class="prop">
+    <span>Opacity</span>
+    <input type="range" id="alpha" min="10" max="100" value="100">
+    <span id="alphaVal" style="width:32px">100%</span>
+  </div>
+</footer>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const guideCanvas = document.getElementById('guideCanvas');
+const gCtx = guideCanvas.getContext('2d');
+
+const color1 = document.getElementById('color1');
+const color2 = document.getElementById('color2');
+const sizeSlider = document.getElementById('size');
+const alphaSlider = document.getElementById('alpha');
+const shape3dProp = document.getElementById('shape3dProp');
+const shape3dType = document.getElementById('shape3dType');
+const lockModeProp = document.getElementById('lockModeProp');
+const lockMode = document.getElementById('lockMode');
+const btn3dLock = document.getElementById('btn3dLock');
+
+let tool = 'brush';
+let drawing = false;
+let lock3d = false;
+let startX = 0, startY = 0;
+let lastX = 0, lastY = 0;
+let lockedAxisAngle = null; // Stores which 3D axis the current brush stroke locked onto
+let snapshot = null;
+let history = [];
+
+const palette = ['#ffffff', '#111215', '#ff2a55', '#ff9900', '#ffe600', '#00e676', '#00a2ff', '#9d4edd'];
+const swatchBox = document.getElementById('swatches');
+palette.forEach(hex => {
+  const s = document.createElement('div');
+  s.className = 'swatch';
+  s.style.background = hex;
+  s.onclick = () => color1.value = hex;
+  swatchBox.appendChild(s);
+});
+
+document.querySelectorAll('.tool').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tool').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tool = btn.dataset.tool;
+    shape3dProp.style.display = tool === 'shape3d' ? 'flex' : 'none';
+  };
+});
+
+sizeSlider.oninput = () => document.getElementById('sizeVal').textContent = sizeSlider.value;
+alphaSlider.oninput = () => document.getElementById('alphaVal').textContent = alphaSlider.value + '%';
+
+function toggle3dLock() {
+  lock3d = !lock3d;
+  btn3dLock.classList.toggle('toggle-on', lock3d);
+  btn3dLock.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    3D Axis Lock: ${lock3d ? 'ON' : 'OFF'}
+  `;
+  lockModeProp.style.display = lock3d ? 'flex' : 'none';
+  draw3DGrid();
+}
+
+// Draws faint 3D perspective/parallel grid lines on the overlay (never exported in PNG!)
+function draw3DGrid(activePoint = null, activeAngle = null) {
+  gCtx.clearRect(0, 0, guideCanvas.width, guideCanvas.height);
+  if (!lock3d) return;
+
+  const w = guideCanvas.width;
+  const h = guideCanvas.height;
+  const step = w === 1920 ? 120 : 64;
+
+  gCtx.save();
+  gCtx.strokeStyle = 'rgba(0, 230, 118, 0.14)';
+  gCtx.lineWidth = 1.5;
+
+  if (lockMode.value === 'oblique') {
+    // Vertical lines
+    for (let x = 0; x <= w; x += step) {
+      gCtx.beginPath(); gCtx.moveTo(x, 0); gCtx.lineTo(x, h); gCtx.stroke();
+    }
+    // Horizontal lines
+    for (let y = 0; y <= h; y += step) {
+      gCtx.beginPath(); gCtx.moveTo(0, y); gCtx.lineTo(w, y); gCtx.stroke();
+    }
+    // 35-degree depth lines
+    const rad = -35 * Math.PI / 180;
+    const dx = Math.cos(rad) * (w + h);
+    const dy = Math.sin(rad) * (w + h);
+    gCtx.strokeStyle = 'rgba(0, 162, 255, 0.18)';
+    for (let x = -h; x <= w + h; x += step) {
+      gCtx.beginPath(); gCtx.moveTo(x, h); gCtx.lineTo(x + dx, h + dy); gCtx.stroke();
+    }
+  } else {
+    // Isometric: Vertical + 30 deg up-right + 30 deg up-left
+    for (let x = 0; x <= w; x += step) {
+      gCtx.beginPath(); gCtx.moveTo(x, 0); gCtx.lineTo(x, h); gCtx.stroke();
+    }
+    const len = w + h;
+    for (let offset = -len; offset <= len; offset += step) {
+      // +30 deg
+      gCtx.beginPath();
+      gCtx.moveTo(0, offset);
+      gCtx.lineTo(len * Math.cos(Math.PI/6), offset + len * Math.sin(Math.PI/6));
+      gCtx.stroke();
+      // -30 deg
+      gCtx.strokeStyle = 'rgba(0, 162, 255, 0.18)';
+      gCtx.beginPath();
+      gCtx.moveTo(0, offset);
+      gCtx.lineTo(len * Math.cos(-Math.PI/6), offset + len * Math.sin(-Math.PI/6));
+      gCtx.stroke();
+      gCtx.strokeStyle = 'rgba(0, 230, 118, 0.14)';
+    }
+  }
+
+  // Highlight active 3D guide laser when drawing!
+  if (activePoint && activeAngle !== null) {
+    gCtx.strokeStyle = '#00e676';
+    gCtx.lineWidth = 2;
+    gCtx.setLineDash([8, 8]);
+    gCtx.beginPath();
+    gCtx.moveTo(activePoint.x - Math.cos(activeAngle) * 2500, activePoint.y - Math.sin(activeAngle) * 2500);
+    gCtx.lineTo(activePoint.x + Math.cos(activeAngle) * 2500, activePoint.y + Math.sin(activeAngle) * 2500);
+    gCtx.stroke();
+  }
+  gCtx.restore();
+}
+
+// Snaps any mouse movement onto the nearest valid 3D axis
+function snapTo3DAxis(ox, oy, mx, my, forcedAngle = null) {
+  const dx = mx - ox;
+  const dy = my - oy;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 2) return { x: ox, y: oy, angle: forcedAngle };
+
+  // Allowed angles in degrees
+  const degs = lockMode.value === 'oblique'
+    ? [0, 180, 90, -90, -35, 145]      // Horizontal, Vertical, and 35° Depth
+    : [90, -90, 30, -150, -30, 150];   // Isometric 3-axis cube angles
+
+  let bestAngle = forcedAngle;
+  if (bestAngle === null) {
+    const mouseAngle = Math.atan2(dy, dx);
+    let minDiff = Infinity;
+    for (const d of degs) {
+      const rad = d * Math.PI / 180;
+      let diff = Math.abs(Math.atan2(Math.sin(mouseAngle - rad), Math.cos(mouseAngle - rad)));
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestAngle = rad;
+      }
+    }
+  }
+
+  // Project mouse vector onto chosen axis
+  const proj = dx * Math.cos(bestAngle) + dy * Math.sin(bestAngle);
+  return {
+    x: ox + Math.cos(bestAngle) * proj,
+    y: oy + Math.sin(bestAngle) * proj,
+    angle: bestAngle
+  };
+}
+
+function saveState() {
+  if (history.length > 25) history.shift();
+  history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+}
+
+function undo() {
+  if (history.length > 0) ctx.putImageData(history.pop(), 0, 0);
+}
+
+function clearCanvas() {
+  saveState();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function setRatio(w, h, btnId) {
+  document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+  const temp = document.createElement('canvas');
+  temp.width = canvas.width; temp.height = canvas.height;
+  temp.getContext('2d').drawImage(canvas, 0, 0);
+  canvas.width = guideCanvas.width = w;
+  canvas.height = guideCanvas.height = h;
+  ctx.drawImage(temp, 0, 0, w, h);
+  history = [];
+  draw3DGrid();
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function shadeColor(hex, percent) {
+  let num = parseInt(hex.slice(1), 16),
+      amt = Math.round(2.55 * percent),
+      R = (num >> 16) + amt,
+      G = (num >> 8 & 0x00FF) + amt,
+      B = (num & 0x0000FF) + amt;
+  return '#' + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 + (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255)).toString(16).slice(1);
+}
+
+function drawDot(x, y) {
+  const r = sizeSlider.value / 2;
+  ctx.save();
+  ctx.globalAlpha = alphaSlider.value / 100;
+  if (tool === 'eraser') {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000';
+  } else if (tool === 'glow') {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = color1.value;
+    ctx.shadowBlur = sizeSlider.value * 1.8;
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = color1.value;
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStroke(x1, y1, x2, y2) {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = sizeSlider.value;
+  ctx.globalAlpha = alphaSlider.value / 100;
+
+  if (tool === 'eraser') {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = '#000';
+  } else if (tool === 'glow') {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowColor = color1.value;
+    ctx.shadowBlur = sizeSlider.value * 1.8;
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = color1.value;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+canvas.addEventListener('mousedown', e => {
+  const { x, y } = getPos(e);
+  startX = lastX = x;
+  startY = lastY = y;
+  lockedAxisAngle = null;
+
+  if (tool === 'picker') {
+    const p = ctx.getImageData(x, y, 1, 1).data;
+    color1.value = '#' + [p[0], p[1], p[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+    return;
+  }
+
+  saveState();
+
+  if (tool === 'fill') {
+    ctx.globalAlpha = alphaSlider.value / 100;
+    ctx.fillStyle = color1.value;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  if (tool === 'burst') {
+    drawSpeedlines(x, y);
+    return;
+  }
+
+  if (tool === 'text') {
+    const txt = prompt('Enter Roblox Thumbnail Text:');
+    if (txt) drawRobloxText(txt, x, y);
+    return;
+  }
+
+  drawing = true;
+  snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (tool === 'brush' || tool === 'glow' || tool === 'eraser') {
+    drawDot(x, y);
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!drawing) return;
+  let { x, y } = getPos(e);
+
+  if (tool === 'brush' || tool === 'glow' || tool === 'eraser') {
+    if (lock3d && tool !== 'eraser') {
+      // Wait until mouse moves at least 8px to lock onto the 3D axis you aimed at
+      if (lockedAxisAngle === null && Math.hypot(x - startX, y - startY) < 8) return;
+      const snapped = snapTo3DAxis(startX, startY, x, y, lockedAxisAngle);
+      lockedAxisAngle = snapped.angle;
+      x = snapped.x;
+      y = snapped.y;
+      draw3DGrid({ x: startX, y: startY }, lockedAxisAngle);
+    }
+    drawStroke(lastX, lastY, x, y);
+    lastX = x;
+    lastY = y;
+    return;
+  }
+
+  ctx.putImageData(snapshot, 0, 0);
+  ctx.save();
+  ctx.globalAlpha = alphaSlider.value / 100;
+  ctx.lineWidth = sizeSlider.value;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = color1.value;
+  ctx.fillStyle = color1.value;
+
+  if (tool === 'line') {
+    if (lock3d) {
+      const snapped = snapTo3DAxis(startX, startY, x, y);
+      x = snapped.x;
+      y = snapped.y;
+      draw3DGrid({ x: startX, y: startY }, snapped.angle);
+    } else if (e.shiftKey) {
+      const dx = x - startX, dy = y - startY;
+      const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+      const dist = Math.hypot(dx, dy);
+      x = startX + Math.cos(angle) * dist;
+      y = startY + Math.sin(angle) * dist;
+    }
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  } else if (tool === 'rect') {
+    ctx.strokeRect(startX, startY, x - startX, y - startY);
+  } else if (tool === 'circle') {
+    const r = Math.hypot(x - startX, y - startY);
+    ctx.beginPath();
+    ctx.arc(startX, startY, r, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (tool === 'gradient') {
+    const grad = ctx.createLinearGradient(startX, startY, x, y);
+    grad.addColorStop(0, color1.value);
+    grad.addColorStop(1, color2.value);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else if (tool === 'shape3d') {
+    draw3DFigure(shape3dType.value, startX, startY, x - startX, y - startY);
+  }
+  ctx.restore();
+});
+
+window.addEventListener('mouseup', () => {
+  if (!drawing) return;
+  drawing = false;
+  lockedAxisAngle = null;
+  if (lock3d) draw3DGrid(); // Clear the bright green active laser, keep subtle grid
+});
+
+function draw3DBox(x, y, w, h, depth, baseHex) {
+  if (w < 0) { x += w; w = Math.abs(w); }
+  if (h < 0) { y += h; h = Math.abs(h); }
+  // Matches exact 35-degree Oblique 3D Axis Lock angle!
+  const rad = -35 * Math.PI / 180;
+  const dx = Math.cos(rad) * depth;
+  const dy = Math.sin(rad) * depth;
+
+  const frontColor = baseHex;
+  const topColor = shadeColor(baseHex, 25);
+  const sideColor = shadeColor(baseHex, -25);
+
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#111215';
+  ctx.lineJoin = 'round';
+
+  ctx.fillStyle = topColor;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + dx, y + dy);
+  ctx.lineTo(x + w + dx, y + dy);
+  ctx.lineTo(x + w, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = sideColor;
+  ctx.beginPath();
+  ctx.moveTo(x + w, y);
+  ctx.lineTo(x + w + dx, y + dy);
+  ctx.lineTo(x + w + dx, y + h + dy);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = frontColor;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeRect(x, y, w, h);
+}
+
+function draw3DFigure(type, x, y, w, h) {
+  if (Math.abs(w) < 4 && Math.abs(h) < 4) return;
+  if (w < 0) { x += w; w = Math.abs(w); }
+  if (h < 0) { y += h; h = Math.abs(h); }
+
+  const c1 = color1.value;
+  const c2 = color2.value;
+
+  if (type === 'cube') {
+    const depth = Math.min(w, h) * 0.55;
+    draw3DBox(x, y, w, h, depth, c1);
+    const rad = -35 * Math.PI / 180;
+    const studW = w * 0.45, studH = depth * 0.32;
+    const sx = x + (w - studW) / 2 + Math.cos(rad) * (depth * 0.5);
+    const sy = y + Math.sin(rad) * (depth * 0.5);
+    ctx.fillStyle = shadeColor(c1, 35);
+    ctx.strokeStyle = '#111215';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(sx + studW / 2, sy, studW / 2, studH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  } 
+  else if (type === 'dummy') {
+    const unitW = w / 4;
+    const unitH = h / 4.2;
+    const depth = unitW * 0.7;
+    const cx = x + w / 2;
+
+    draw3DBox(cx + unitW, y + unitH * 1.1, unitW * 0.9, unitH * 1.8, depth, '#f5cd30');
+    draw3DBox(cx + unitW * 0.05, y + unitH * 2.9, unitW * 0.92, unitH * 1.3, depth, c2);
+    draw3DBox(cx - unitW * 0.97, y + unitH * 2.9, unitW * 0.92, unitH * 1.3, depth, c2);
+    draw3DBox(cx - unitW, y + unitH * 1.1, unitW * 2, unitH * 1.8, depth, c1);
+    draw3DBox(cx - unitW * 0.6, y, unitW * 1.2, unitH * 1.05, depth * 0.9, '#f5cd30');
+    draw3DBox(cx - unitW * 1.95, y + unitH * 1.1, unitW * 0.9, unitH * 1.8, depth, '#f5cd30');
+
+    const hx = cx - unitW * 0.6;
+    const hw = unitW * 1.2;
+    const hh = unitH * 1.05;
+    ctx.fillStyle = '#111215';
+    ctx.beginPath();
+    ctx.arc(hx + hw * 0.35, y + hh * 0.4, hw * 0.07, 0, Math.PI * 2);
+    ctx.arc(hx + hw * 0.68, y + hh * 0.4, hw * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = Math.max(2, hw * 0.06);
+    ctx.strokeStyle = '#111215';
+    ctx.beginPath();
+    ctx.arc(hx + hw * 0.52, y + hh * 0.52, hw * 0.22, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+  } 
+  else if (type === 'cylinder') {
+    const rx = w / 2;
+    const ry = Math.min(h * 0.22, rx * 0.5);
+    const bodyH = Math.max(10, h - ry * 2);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#111215';
+
+    const grad = ctx.createLinearGradient(x, y, x + w, y);
+    grad.addColorStop(0, shadeColor(c1, -20));
+    grad.addColorStop(0.35, shadeColor(c1, 15));
+    grad.addColorStop(1, shadeColor(c1, -35));
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y + ry);
+    ctx.lineTo(x, y + ry + bodyH);
+    ctx.ellipse(x + rx, y + ry + bodyH, rx, ry, 0, Math.PI, 0, true);
+    ctx.lineTo(x + w, y + ry);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = shadeColor(c1, 30);
+    ctx.beginPath();
+    ctx.ellipse(x + rx, y + ry, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  } 
+  else if (type === 'pyramid') {
+    const apexX = x + w * 0.45;
+    const apexY = y;
+    const bl = { x: x, y: y + h };
+    const br = { x: x + w * 0.72, y: y + h };
+    const tr = { x: x + w, y: y + h * 0.78 };
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#111215';
+    ctx.lineJoin = 'round';
+
+    ctx.fillStyle = c1;
+    ctx.beginPath();
+    ctx.moveTo(apexX, apexY);
+    ctx.lineTo(bl.x, bl.y);
+    ctx.lineTo(br.x, br.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = shadeColor(c1, -28);
+    ctx.beginPath();
+    ctx.moveTo(apexX, apexY);
+    ctx.lineTo(br.x, br.y);
+    ctx.lineTo(tr.x, tr.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+function drawSpeedlines(cx, cy) {
+  const maxR = Math.hypot(canvas.width, canvas.height);
+  const innerR = Math.min(canvas.width, canvas.height) * 0.22;
+  ctx.save();
+  ctx.globalAlpha = alphaSlider.value / 100;
+  ctx.fillStyle = color1.value;
+  for (let i = 0; i < 90; i++) {
+    const angle = (Math.PI * 2 * i) / 90 + (Math.random() * 0.04);
+    const spread = 0.012 + Math.random() * 0.02;
+    const rStart = innerR + Math.random() * 140;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * rStart, cy + Math.sin(angle) * rStart);
+    ctx.lineTo(cx + Math.cos(angle - spread) * maxR, cy + Math.sin(angle - spread) * maxR);
+    ctx.lineTo(cx + Math.cos(angle + spread) * maxR, cy + Math.sin(angle + spread) * maxR);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawRobloxText(text, x, y) {
+  const fontSize = Math.max(48, sizeSlider.value * 5);
+  ctx.save();
+  ctx.font = `900 ${fontSize}px Impact, "Arial Black", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = 16;
+  ctx.shadowOffsetY = 10;
+
+  ctx.lineWidth = fontSize * 0.16;
+  ctx.strokeStyle = '#111215';
+  ctx.strokeText(text.toUpperCase(), x, y);
+
+  const grad = ctx.createLinearGradient(x, y - fontSize / 2, x, y + fontSize / 2);
+  grad.addColorStop(0, color1.value);
+  grad.addColorStop(1, color2.value);
+  ctx.fillStyle = grad;
+  ctx.shadowColor = 'transparent';
+  ctx.fillText(text.toUpperCase(), x, y);
+  ctx.restore();
+}
+
+function triggerImport() { document.getElementById('imgInput').click(); }
+
+function importImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    saveState();
+    const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+    const w = img.width * scale, h = img.height * scale;
+    ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+  };
+  img.src = URL.createObjectURL(file);
+  e.target.value = '';
+}
+
+function exportPNG() {
+  const link = document.createElement('a');
+  link.download = canvas.width === 1920 ? 'roblox-thumbnail.png' : 'roblox-icon.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+});
+</script>
+</body>
+</html>
