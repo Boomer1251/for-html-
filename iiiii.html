@@ -1,0 +1,421 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Deutsch Lernen R3</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one centered column. Header, mode tabs, study panel, progress charts, word list. */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --fg: #1b2230; --muted: #5d6677; --line: #dde1e8;
+  --accent: #2b59c3; --accent-fg: #ffffff; --good: #1f8a4c; --good-bg: #e3f4ea; --bad: #c23b3b; --bad-bg: #fbe7e7;
+  --unseen: #c4cad6;
+  --font-body: 'Inter', system-ui, sans-serif; --font-head: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --panel: #1a202a; --fg: #e8ebf1; --muted: #98a1b2; --line: #2b3342;
+  --accent: #7ea2f2; --accent-fg: #0f1524; --good: #5cc88a; --good-bg: #17302288; --bad: #ef8585; --bad-bg: #3a1d1d88;
+  --unseen: #3b4458; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --panel: #1a202a; --fg: #e8ebf1; --muted: #98a1b2; --line: #2b3342;
+  --accent: #7ea2f2; --accent-fg: #0f1524; --good: #5cc88a; --good-bg: #17302288; --bad: #ef8585; --bad-bg: #3a1d1d88;
+  --unseen: #3b4458; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--font-body); padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font: 700 1.6rem var(--font-head); margin: 0; text-wrap: balance; }
+h2 { font: 700 1.05rem var(--font-head); margin: 0; }
+.sub { color: var(--muted); margin: 2px 0 0; font-size: .9rem; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tabs button, .opt, .btn, select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 9px 14px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.stats { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.stats b { color: var(--fg); }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+.label { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.prompt { font: 700 1.7rem/1.25 var(--font-head); overflow-wrap: anywhere; text-wrap: balance; }
+.card { min-height: 190px; display: flex; flex-direction: column; justify-content: center; gap: 8px; border: 1px dashed var(--line); border-radius: 8px; padding: 20px; cursor: pointer; text-align: center; }
+.opts { display: grid; gap: 8px; }
+.opt { text-align: left; }
+.opt.right, .good { background: var(--good-bg); border-color: var(--good); }
+.opt.wrong, .bad { background: var(--bad-bg); border-color: var(--bad); }
+input[type=text] { font: inherit; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.msg { padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; overflow-wrap: anywhere; }
+.hint { color: var(--muted); font-size: .85rem; }
+.note { padding: 8px 12px; border-radius: 6px; background: var(--bad-bg); border: 1px solid var(--bad); font-size: .9rem; overflow-wrap: anywhere; }
+.done { text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.scroll { overflow-x: auto; max-height: 320px; overflow-y: auto; }
+details summary { cursor: pointer; color: var(--muted); }
+
+/* Progress charts */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+.kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi b { font: 700 1.6rem/1.1 var(--font-head); font-variant-numeric: tabular-nums; }
+.kpi span { color: var(--muted); font-size: .8rem; }
+.chart-block { display: flex; flex-direction: column; gap: 8px; }
+.chart-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: .82rem; font-variant-numeric: tabular-nums; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+svg.chart { width: 100%; height: auto; display: block; }
+svg.chart text { fill: var(--muted); font: 11px var(--font-body); }
+svg.chart .grid { stroke: var(--line); stroke-width: 1; }
+.stack { display: flex; gap: 2px; height: 22px; }
+.stack > span { min-width: 0; border-radius: 3px; }
+.s-unseen { background: var(--unseen); } .s-weak { background: var(--bad); } .s-learn { background: var(--accent); } .s-solid { background: var(--good); }
+.hard { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; font-size: .9rem; }
+.hard .w { overflow-wrap: anywhere; }
+.hard .track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.hard .track > i { display: block; height: 100%; background: var(--bad); }
+.hard .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .82rem; white-space: nowrap; }
+.empty { color: var(--muted); font-size: .9rem; }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+
+<main>
+  <header>
+    <h1>Deutsch Lernen R3</h1>
+    <p class="sub">Maximal R3, klasa 7. Słówka i zwroty, <span id="total"></span> pozycji. Jeden błąd i runda zaczyna się od nowa.</p>
+  </header>
+
+  <div class="row tabs" id="modes" role="group" aria-label="Tryb nauki">
+    <button data-m="cards">Fiszki</button>
+    <button data-m="choice">Test wyboru</button>
+    <button data-m="type">Wpisywanie</button>
+  </div>
+
+  <div class="row">
+    <label class="row" style="gap:6px">Kierunek
+      <select id="dir"><option value="dp">Niemiecki → polski</option><option value="pd">Polski → niemiecki</option></select>
+    </label>
+    <label class="row" style="gap:6px">Zestaw
+      <select id="pool"><option value="all">Wszystkie</option><option value="weak">Tylko trudne</option></select>
+    </label>
+  </div>
+
+  <section class="panel" id="panel" aria-live="polite"></section>
+
+  <section class="panel" id="charts" aria-label="Postępy"></section>
+
+  <details>
+    <summary>Lista słówek i twoje wyniki</summary>
+    <div class="scroll"><table id="list"></table></div>
+    <p><button class="btn" id="reset">Wyczyść postępy</button></p>
+  </details>
+</main>
+
+<script>
+const RAW = [
+["sprechen","mówić, rozmawiać"],["lachen","śmiać się"],["tanzen","tańczyć"],["der Junge","chłopak"],["das Mädchen","dziewczyna"],
+["nett","miły"],["die Straße","ulica"],["die Handynummer","numer telefonu komórkowego"],["die Hausnummer","numer domu"],
+["der Nachname","nazwisko"],["die Postleitzahl","kod pocztowy"],["der Vorname","imię"],["Basketball spielen","grać w koszykówkę"],
+["Fußball spielen","grać w piłkę nożną"],["Sport machen","uprawiać sport"],["Volleyball spielen","grać w siatkówkę"],
+["die Fremdsprache","język obcy"],["die Muttersprache","język ojczysty"],["die Sprache","język"],
+["Sprichst du Deutsch?","Czy mówisz po niemiecku?"],["Welche Sprachen sprichst du?","Jakimi językami mówisz?"],["Englisch","język angielski"],
+["Ich spreche Polnisch.","Mówię po polsku"],["sehr gut","bardzo dobrze"],["nicht so gut","nie za dobrze"],["nur ein wenig","tylko trochę"],
+["kein Wort","ani słowa"],["Ich spreche kein Wort Englisch","nie mówię po angielsku ani słowa"],["Wir machen Pause.","Robimy przerwę"],
+["Wie ist deine Handynummer?","Jaki jest twój numer telefonu?"],["Meine Handynummer ist","Mój numer telefonu to..."],
+["nur ein bisschen","tylko troszeczkę"],["Wie ist dein Vorname?","Jak masz na imię?"],["Mein Vorname ist...","Moje imię to"],
+["Wie ist dein Nachname?","Jakie jest twoje nazwisko?"],["Mein Nachname ist...","Moje nazwisko to"],
+["Wie ist deine Postleitzahl?","Jaki jest twój kod pocztowy?"],["Meine Postleitzahl ist","Mój kod pocztowy to"],
+["Wie ist deine Adresse?","Jaki jest twój adres?"],["wohnen","mieszkać"]
+];
+const WORDS = RAW.map((w, i) => ({ id: i, de: w[0], pl: w[1] }));
+const KEY = 'deutsch-r3-stats-v1';
+const RUNS_KEY = 'deutsch-r3-runs-v1';
+
+let stats = {}, runs = [];
+try { stats = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+try { runs = JSON.parse(localStorage.getItem(RUNS_KEY) || '[]'); if (!Array.isArray(runs)) runs = []; } catch (e) { runs = []; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(stats)); localStorage.setItem(RUNS_KEY, JSON.stringify(runs)); } catch (e) {} };
+const st = id => stats[id] || (stats[id] = { r: 0, w: 0 });
+
+let mode = 'cards', dir = 'dp', poolKind = 'all';
+let queue = [], pos = 0, session = { r: 0, w: 0 }, answered = false, flipped = false;
+let timer = null, pending = null, answeredAt = 0, note = '';
+
+const $ = s => document.querySelector(s);
+const panel = $('#panel');
+function el(tag, props = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const k in props) {
+    if (k === 'class') n.className = props[k];
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), props[k]);
+    else n.setAttribute(k, props[k]);
+  }
+  kids.flat().forEach(c => n.append(c));
+  return n;
+}
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const q = w => dir === 'dp' ? w.de : w.pl;
+const a = w => dir === 'dp' ? w.pl : w.de;
+const isWeak = w => { const s = st(w.id); return s.w > s.r; };
+
+/* Timed steps: later() schedules, skip() runs the scheduled step right away. */
+function later(fn, ms) {
+  clearTimeout(timer);
+  pending = () => { pending = null; fn(); };
+  timer = setTimeout(pending, ms);
+}
+function skip() {
+  if (pending && Date.now() - answeredAt > 250) { clearTimeout(timer); pending(); }
+}
+
+function start() {
+  clearTimeout(timer); pending = null;
+  let pool = WORDS;
+  if (poolKind === 'weak') pool = WORDS.filter(isWeak);
+  queue = shuffle(pool); pos = 0; session = { r: 0, w: 0 }; answered = false; flipped = false;
+  render(); renderCharts(); renderList();
+}
+
+function norm(s) {
+  return s.toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss')
+    .replace(/ą/g, 'a').replace(/ć/g, 'c').replace(/ę/g, 'e').replace(/ł/g, 'l').replace(/ń/g, 'n').replace(/ó/g, 'o').replace(/ś/g, 's').replace(/[źż]/g, 'z')
+    .replace(/\.\.\./g, ' ').replace(/[.,?!;:"']/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// ae/oe/ue spellings are accepted in place of ä/ö/ü.
+function normDe(s) { return norm(s).replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u'); }
+function check(input, w) {
+  const n = dir === 'dp' ? norm : normDe;
+  const given = n(input);
+  if (!given) return false;
+  const target = a(w);
+  const options = [target, ...target.split(',')];
+  return options.some(o => n(o) === given);
+}
+
+function logRun(clean) {
+  runs.push({ t: Date.now(), m: mode, d: dir, p: poolKind, got: session.r, total: queue.length, clean });
+  if (runs.length > 80) runs = runs.slice(-80);
+}
+
+function record(w, ok) {
+  const s = st(w.id); ok ? s.r++ : s.w++;
+  ok ? session.r++ : session.w++;
+  save();
+}
+
+/* A correct answer moves on by itself; a miss shows the answer, then restarts the round. */
+function good(w, delay) {
+  record(w, true);
+  answeredAt = Date.now();
+  const last = pos + 1 >= queue.length;
+  if (last) logRun(true);
+  save(); renderCharts(); renderList();
+  const go = () => { pos++; answered = false; flipped = false; render(); };
+  if (delay) later(go, delay); else go();
+}
+function miss(w, delay) {
+  record(w, false);
+  answeredAt = Date.now();
+  logRun(false);
+  save(); renderCharts(); renderList();
+  note = 'Pomyłka przy „' + q(w) + '”. Runda zaczyna się od nowa.';
+  if (delay) later(start, delay); else start();
+}
+
+function header() {
+  const total = queue.length;
+  const pct = total ? Math.round(pos / total * 100) : 0;
+  const kids = [];
+  if (note) { kids.push(el('div', { class: 'note', role: 'status' }, note)); note = ''; }
+  kids.push(
+    el('div', { class: 'stats' },
+      el('span', {}, 'Karta ', el('b', {}, String(Math.min(pos + 1, total))), ' z ', el('b', {}, String(total))),
+      el('span', {}, 'Seria: ', el('b', {}, String(session.r)))),
+    el('div', { class: 'bar' }, el('i', { style: 'width:' + pct + '%' })));
+  return kids;
+}
+
+function finished() {
+  const body = el('div', { class: 'done' },
+    el('div', { class: 'prompt' }, 'Runda bez błędów'),
+    el('div', {}, `Wynik: ${session.r} z ${queue.length}`),
+    el('button', { class: 'btn primary', onclick: start }, 'Jeszcze raz'));
+  panel.replaceChildren(body);
+}
+
+function render() {
+  if (!queue.length || pos >= queue.length) {
+    if (!queue.length) {
+      panel.replaceChildren(el('div', { class: 'done' }, el('div', {}, 'Nie ma jeszcze trudnych słówek. Poćwicz najpierw wszystkie.'),
+        el('button', { class: 'btn primary', onclick: () => { poolKind = 'all'; $('#pool').value = 'all'; start(); } }, 'Wszystkie słówka')));
+      return;
+    }
+    return finished();
+  }
+  const w = queue[pos];
+  const kids = header();
+  const label = dir === 'dp' ? 'po niemiecku' : 'po polsku';
+  if (mode === 'cards') {
+    const card = el('div', { class: 'card', tabindex: '0', role: 'button', 'aria-label': 'Odwróć kartę', onclick: flip, onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } } },
+      el('div', { class: 'label' }, flipped ? (dir === 'dp' ? 'po polsku' : 'po niemiecku') : label),
+      el('div', { class: 'prompt' }, flipped ? a(w) : q(w)),
+      el('div', { class: 'hint' }, flipped ? '' : 'Kliknij, żeby zobaczyć odpowiedź'));
+    kids.push(card);
+    if (flipped) kids.push(el('div', { class: 'row' },
+      el('button', { class: 'btn good', onclick: () => good(w, 0) }, 'Umiem'),
+      el('button', { class: 'btn bad', onclick: () => miss(w, 0) }, 'Jeszcze nie')));
+  } else if (mode === 'choice') {
+    kids.push(el('div', { class: 'label' }, label), el('div', { class: 'prompt' }, q(w)));
+    const wrong = shuffle(WORDS.filter(x => x.id !== w.id && a(x) !== a(w))).slice(0, 3);
+    const opts = shuffle([w, ...wrong]);
+    const box = el('div', { class: 'opts' });
+    opts.forEach(o => box.append(el('button', { class: 'opt', onclick: ev => pick(ev.currentTarget, o, w, box) }, a(o))));
+    kids.push(box);
+  } else {
+    kids.push(el('div', { class: 'label' }, 'Przetłumacz ' + (dir === 'dp' ? 'na polski' : 'na niemiecki')), el('div', { class: 'prompt' }, q(w)));
+    const input = el('input', { type: 'text', id: 'answer', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': 'Twoja odpowiedź' });
+    const fb = el('div', { id: 'fb' });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); answered ? skip() : submitTyped(input, fb, w); } });
+    kids.push(input, fb, el('div', { class: 'row' },
+      el('button', { class: 'btn primary', id: 'go', onclick: () => answered ? skip() : submitTyped(input, fb, w) }, 'Sprawdź'),
+      el('button', { class: 'btn', onclick: () => { if (!answered) giveUp(input, fb, w); } }, 'Nie wiem')),
+      el('div', { class: 'hint' }, 'Wielkość liter i znaki interpunkcyjne nie mają znaczenia. ae, oe, ue zamiast ä, ö, ü też przejdzie. Przy kilku znaczeniach wystarczy jedno.'));
+    setTimeout(() => input.focus(), 0);
+  }
+  panel.replaceChildren(...kids);
+}
+
+function flip() { flipped = !flipped; render(); }
+function pick(btn, o, w, box) {
+  if (answered) return; answered = true;
+  const ok = o.id === w.id;
+  btn.classList.add(ok ? 'right' : 'wrong');
+  if (!ok) [...box.children].forEach(b => { if (b.textContent === a(w)) b.classList.add('right'); });
+  ok ? good(w, 450) : miss(w, 2400);
+}
+function submitTyped(input, fb, w) {
+  if (!input.value.trim()) return;
+  answered = true; const ok = check(input.value, w);
+  fb.className = 'msg ' + (ok ? 'good' : 'bad');
+  fb.textContent = ok ? 'Dobrze! ' + a(w) : 'Poprawna odpowiedź: ' + a(w);
+  input.readOnly = true;
+  ok ? good(w, 650) : miss(w, 2800);
+}
+function giveUp(input, fb, w) {
+  answered = true;
+  fb.className = 'msg bad'; fb.textContent = 'Poprawna odpowiedź: ' + a(w);
+  input.readOnly = true;
+  miss(w, 2800);
+}
+
+/* ---------- Progress charts ---------- */
+function wordState(w) {
+  const s = st(w.id);
+  if (s.r + s.w === 0) return 'unseen';
+  if (s.w > s.r) return 'weak';
+  if (s.r >= 3 && s.r >= 2 * s.w) return 'solid';
+  return 'learn';
+}
+
+function runsChart() {
+  const shown = runs.slice(-24);
+  const SLOTS = 24, W = 600, H = 180, L = 30, R = 6, T = 10, B = 22;
+  const innerW = W - L - R, innerH = H - T - B;
+  const top = Math.max(WORDS.length, ...shown.map(r => r.total));
+  const y = v => T + innerH - (v / top) * innerH;
+  const slot = innerW / SLOTS, bw = Math.min(slot - 4, 18);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Długość serii w ostatnich podejściach">`;
+  [0, top / 2, top].forEach(v => {
+    s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`;
+  });
+  shown.forEach((r, i) => {
+    const x = L + (SLOTS - shown.length + i) * slot + (slot - bw) / 2;
+    const h = Math.max(2, innerH - (y(r.got) - T));
+    const fill = r.clean ? 'var(--good)' : 'var(--accent)';
+    const lab = (r.clean ? 'Bez błędów: ' : 'Seria: ') + r.got + ' z ' + r.total;
+    s += `<rect x="${x}" y="${T + innerH - h}" width="${bw}" height="${h}" rx="3" fill="${fill}"><title>${lab}</title></rect>`;
+  });
+  s += `<text x="${L}" y="${H - 6}">starsze</text><text x="${W - R}" y="${H - 6}" text-anchor="end">najnowsze</text></svg>`;
+  return s;
+}
+
+function renderCharts() {
+  const box = $('#charts');
+  const counts = { unseen: 0, weak: 0, learn: 0, solid: 0 };
+  WORDS.forEach(w => counts[wordState(w)]++);
+  let ok = 0, bad = 0;
+  WORDS.forEach(w => { const s = st(w.id); ok += s.r; bad += s.w; });
+  const acc = ok + bad ? Math.round(ok / (ok + bad) * 100) + '%' : '–';
+  const best = runs.reduce((m, r) => Math.max(m, r.got), 0);
+  const cleanN = runs.filter(r => r.clean).length;
+
+  const kpis = el('div', { class: 'kpis' },
+    ...[['Podejścia', String(runs.length)], ['Najdłuższa seria', String(best)], ['Rundy bez błędów', String(cleanN)], ['Skuteczność', acc]]
+      .map(([l, v]) => el('div', { class: 'kpi' }, el('b', {}, v), el('span', {}, l))));
+
+  const labels = { solid: 'Opanowane', learn: 'W nauce', weak: 'Trudne', unseen: 'Nowe' };
+  const stack = el('div', { class: 'stack', role: 'img', 'aria-label': 'Podział słówek według opanowania' },
+    ...['solid', 'learn', 'weak', 'unseen'].filter(k => counts[k]).map(k =>
+      el('span', { class: 's-' + k, style: 'flex:' + counts[k] + ' 1 0', title: labels[k] + ': ' + counts[k] })));
+  const legend = el('div', { class: 'legend' },
+    ...['solid', 'learn', 'weak', 'unseen'].map(k => {
+      const sw = el('i', { class: 's-' + k });
+      return el('span', {}, sw, labels[k] + ' ' + counts[k]);
+    }));
+
+  const hardList = WORDS.map(w => ({ w, s: st(w.id) })).filter(x => x.s.w > 0)
+    .sort((x, y) => y.s.w - x.s.w || x.s.r - y.s.r).slice(0, 6);
+  const maxW = hardList.length ? hardList[0].s.w : 1;
+  const hard = hardList.length
+    ? el('div', { class: 'hard' }, ...hardList.flatMap(({ w, s }) => [
+        el('span', { class: 'w' }, w.de),
+        el('span', { class: 'track' }, el('i', { style: 'width:' + Math.round(s.w / maxW * 100) + '%' })),
+        el('span', { class: 'n' }, s.w + ' błędów · ' + s.r + ' ok')]))
+    : el('div', { class: 'empty' }, 'Brak błędów. Tu pojawią się słówka, które sprawiają ci najwięcej kłopotu.');
+
+  const runsBlock = el('div', { class: 'chart-block' },
+    el('div', { class: 'chart-head' }, el('h2', {}, 'Długość serii'),
+      el('div', { class: 'legend' },
+        el('span', {}, el('i', { class: 's-learn' }), 'przerwana błędem'),
+        el('span', {}, el('i', { class: 's-solid' }), 'runda bez błędów'))));
+  if (runs.length) { const holder = el('div'); holder.innerHTML = runsChart(); runsBlock.append(holder); }
+  else runsBlock.append(el('div', { class: 'empty' }, 'Jeszcze brak podejść. Zacznij rundę, a tu pojawi się, ile kart z rzędu umiesz.'));
+
+  box.replaceChildren(
+    el('h2', {}, 'Twoje postępy'), kpis, runsBlock,
+    el('div', { class: 'chart-block' }, el('h2', {}, 'Opanowanie słówek'), stack, legend),
+    el('div', { class: 'chart-block' }, el('h2', {}, 'Najtrudniejsze słówka'), hard));
+}
+
+function renderList() {
+  const t = $('#list');
+  const head = el('tr', {}, el('th', {}, 'Niemiecki'), el('th', {}, 'Polski'), el('th', {}, '✓'), el('th', {}, '✗'));
+  t.replaceChildren(head, ...WORDS.map(w => { const s = st(w.id);
+    return el('tr', {}, el('td', {}, w.de), el('td', {}, w.pl), el('td', {}, String(s.r)), el('td', {}, String(s.w))); }));
+}
+
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT') return;
+  if (answered && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); skip(); return; }
+  if (mode !== 'cards') return;
+  if (!queue.length || pos >= queue.length) return;
+  if (flipped && e.key === 'ArrowRight') good(queue[pos], 0);
+  if (flipped && e.key === 'ArrowLeft') miss(queue[pos], 0);
+});
+panel.addEventListener('click', () => { if (answered) skip(); });
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('#modes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
+  note = ''; start();
+}
+document.querySelectorAll('#modes button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
+$('#dir').addEventListener('change', e => { dir = e.target.value; note = ''; start(); });
+$('#pool').addEventListener('change', e => { poolKind = e.target.value; note = ''; start(); });
+$('#reset').addEventListener('click', e => {
+  if (e.target.dataset.sure) { stats = {}; runs = []; save(); delete e.target.dataset.sure; e.target.textContent = 'Wyczyść postępy'; note = ''; start(); }
+  else { e.target.dataset.sure = '1'; e.target.textContent = 'Na pewno? Kliknij jeszcze raz'; }
+});
+$('#total').textContent = WORDS.length;
+setMode('cards');
+</script>
+
+</body></html>
